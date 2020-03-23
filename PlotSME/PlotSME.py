@@ -2,7 +2,6 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-        nat14mmo@student.lu.se
 Version: 0.2
 -----------------------------------------
 Plan:
