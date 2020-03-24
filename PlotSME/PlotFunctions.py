@@ -2,7 +2,6 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-        nat14mmo@student.lu.se
 Version: 0.3
 -----------------------------------------
 Functions for the PlotAbundances code
