@@ -2,6 +2,7 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
+        nat14mmo@student.lu.se
 Version: 0.2
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
@@ -171,6 +172,7 @@ while True:
 if ynq == 'n':
     raise SystemExit('Linelist not checked')
 
+NoLinesFlag = False
 MultLinesFlag = False
 
 def logic(index):
@@ -189,6 +191,7 @@ LineList = LineList.drop(columns=['JLow', 'ExcHigh', 'JHigh', 'LandLower', 'Land
 
 
 MultLineCount = 0
+NoLineCount = 0
 for i in range(len(lmask)):
     start = lmask[i,1]
     stop = lmask[i,2]
@@ -201,39 +204,16 @@ for i in range(len(lmask)):
         MultLineCount += 1
     if len(LinesInMask) == 0:
         print('No line found in the linelist for linemask at {lam}'.format(lam=lmask[i,0]))
+        NoLinesFlag = True
+        NoLineCount += 1
         
-
+print('\n')
 if MultLinesFlag == False:
     print('No additional lines found within the linemasks')
 else:
     print('{count} linemasks with multiple lines'.format(count=MultLineCount))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+if NoLinesFlag == False:
+    print('No linemasks without lines')
+else:
+    print('{count} linemasks without lines'.format(count=NoLineCount))
