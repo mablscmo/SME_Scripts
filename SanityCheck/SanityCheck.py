@@ -2,7 +2,6 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-        nat14mmo@student.lu.se
 Version: 0.2
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
