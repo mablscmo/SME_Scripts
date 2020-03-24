@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-Version: 0.2
+Version: 0.3
 -----------------------------------------
 Plan:
     Ok, så planen är att du ger åtminstånde två inputs i början: element och jämförelse. Kanske skippar att ge jämförelse som input.
@@ -17,15 +17,12 @@ Plan:
     Plan till diagnostic: ge input 'diagnostic' för allting, annars 'teff' 'logg' etc, sätt en if statement i PA som omdefinierar element till diagnostic
     och frågar efter en extra element input. Kör en "If element in PlotInput: pl.PlotElement, If element in Diagnostics: pl.PlotDiagnostics"
 
-New in version 0.2:
-    Switched to fig, ax method of plotting.
-    Rewrote script into functions and changed the order so that multiple elements can be plotted without reloading data.
-        Note this works best with inline plotting, some trouble with interactive plots.
-    Split up the script into 3 files, PlotVariables with text info, PlotFunctions with functions.
-    
+New in version 0.3:
+    Renamed from PlotAbundances to PlotSME
+    Complete optical sample implemented as background for the optical comparison, doesn't work on rap, rap still running 0.2.
+    Implemented diagnostics, give "diag" as input to start comparison between IGRINS and optical results. Individual plots available.
+
 Top priority:
-    Implement all optical stars as a background.
-    Create diagnostic plots, with difference to optical on y-axis and Teff/log g/[Fe/H]/vmic on the x-axis. Plan in plans.
     Get the name of the element on the plots.
     Create a all plots grop with coloured backgrounds.
     
@@ -67,58 +64,37 @@ else:
 
 #Read in results files
 IGRINS_RESULTS = pd.read_csv(resdir+'result_H_val08_ni_20200314_175239.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
-OPTICAL_RESULTS = pd.read_csv(resdir+'result_optical_start_H.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
+OPTICAL_RESULTS = pd.read_csv(resdir+'result_optical_start_H_si_update.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
+OPTICAL_COMPLETE = pd.read_csv(resdir+'results_val08_all-correct.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
 IVALU_DATA = pd.read_csv(homedir+'IVALU_Results.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
+IVALU_RESULTS = IVALU_DATA[IVALU_DATA['2MASS'].isin(IGRINS_RESULTS['2MASS'].values)]
 APOGEE_RESULTS = pd.read_csv(homedir+'APOGEE_DATA.txt',names=APOGEE_Header,delim_whitespace=True)
 
-MY2MASS = IGRINS_RESULTS['2MASS'].values
 
-IVALU_RESULTS = IVALU_DATA[IVALU_DATA['2MASS'].isin(list(MY2MASS))]
+OPTICAL_DIF = IGRINS_RESULTS.drop(columns=DROP_LIST) - OPTICAL_RESULTS.drop(columns=DROP_LIST)
 
-DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS]
-
+DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE]
 
 
 while True:
-    pl.PickElement()
-    element = pl.element
+    if diagFlag == False:
+        pl.PickElement()
+        element = pl.element
     if element == 'quit':
         print('Plotting stopped')
         break  
-    pl.PlotElement(element, DATA, plotdir)
-    print('Plotted {el}'.format(el=element))
+    elif (element in PlotInput) and (diagFlag == False):
+        pl.PlotElement(element, DATA, plotdir)
+        print('Plotted {el}'.format(el=element))
+    elif (element in Diagnostics) or (diagFlag == True):
+        print('\n Diagnosing...')
+        if diagFlag == False:
+            diag = element
+        pl.PickElement()
+        element = pl.element
+        if element == 'quit':
+            print('Diagnosing stopped')
+            break
+        pl.PlotDiagnostics(element, diag, DATA, OPTICAL_DIF, plotdir)
+        diagFlag = True
     continue
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
