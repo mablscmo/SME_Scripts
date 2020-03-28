@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.2
+Version: 0.2.1
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
 It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
@@ -17,6 +17,9 @@ New in version 0.2:
     SanityCheck searches through the linelist for linemasks containing none or multiple lines. Multiple lines causes trouble for astrophysical gf.
         The linelist features requires pandas version '0.25.3' or higher (or maybe lower as well), so it doesn't work on rap.
     SanityCheck checks which computer it is being run on and has saved directories. Maybe I remove the input and just tell people to update the file.
+    
+    0.2.1
+    Fixed a problem with the continuum/linemask intersection finder
 """
 
 import numpy as np
@@ -141,8 +144,9 @@ for i in range(len(contmask)):
 for i in range(len(contmask)):
     ContLineCheck = np.any([(contmask[i,0]<lmask[:,2])&(contmask[i,1]>lmask[:,2]),(contmask[i,0]<lmask[:,1])&(contmask[i,1]>lmask[:,1])],axis=1)
     if np.any(ContLineCheck) == True:
-        InterruptedLine = np.where([(contmask[i,0]<lmask[:,2])&(contmask[i,1]>lmask[:,2]),(contmask[i,0]<lmask[:,1])&(contmask[i,1]>lmask[:,1])])[0]
-        print('Continuummask at {cont} intersects the linemask for {line}'.format(cont=contmask[i,0], line=lmask[InterruptedLine,0]))
+        InterruptedLine = np.where((contmask[i,0]<lmask[:,2])&(contmask[i,1]>lmask[:,2]) | (contmask[i,0]<lmask[:,1])&(contmask[i,1]>lmask[:,1]))[0]
+        # print(InterruptedLine, i)
+        print('Continuummask at {cont} intersects the linemask for {line}'.format(cont=format(contmask[i,0],'.3f'), line=lmask[InterruptedLine,0]))
         ContFlag = False
 
 
@@ -210,9 +214,9 @@ print('\n')
 if MultLinesFlag == False:
     print('No additional lines found within the linemasks')
 else:
-    print('{count} linemasks with multiple lines'.format(count=MultLineCount))
+    print('{count}/{tot} linemasks with multiple lines'.format(count=MultLineCount, tot = len(lmask)))
 
 if NoLinesFlag == False:
     print('No linemasks without lines')
 else:
-    print('{count} linemasks without lines'.format(count=NoLineCount))
+    print('{count}/{tot} linemasks without lines'.format(count=NoLineCount, tot = len(lmask)))
