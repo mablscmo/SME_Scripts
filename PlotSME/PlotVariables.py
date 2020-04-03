@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.3
+Version: 0.3.2
 -----------------------------------------
 Text info for the PlotAbundances code
 """
@@ -64,9 +64,9 @@ Elements = ['Al','C','Ca','Ce','Co','Cr','Cu','Fe','Ge','HF','K','Mg','Mn','Na',
 al,c,ca,ce,co,cr,cu,fe,ge,hf,k,mg,mn,na,nd,ni,p,rb,s,sc,si,ti,v,y,yb = Elements
 Al,C,Ca,Ce,Co,Cr,Cu,Fe,Ge,Hf,K,Mg,Mn,Na,Nd,Ni,P,Rb,S,Sc,Si,Ti,V,Y,Yb = Elements
 
-Groups = ['Alpha', 'Iron_peak', 'Neutron_capture']
-alpha, ironpeak, neutroncapture = Groups
-Alpha, iron, neutron = Groups
+Groups = ['Alpha', 'Odd', 'Iron_peak', 'Neutron_capture']
+alpha, odd, ironpeak, neutroncapture = Groups
+Alpha, Odd, iron, neutron = Groups
 
 PlotInput = Elements + Groups
 
@@ -80,7 +80,8 @@ Colours = ['royalblue', 'crimson', 'forestgreen']#darkviolet
 
 
 #Elements within groups
-AlphaElements = ['Si','Mg','S','Al','Ca']
+AlphaElements = ['Si','Mg','S','Ca']
+OddElements = ['Al', 'Na']
 IronElements = ['Ni','Cr']
 NeutronElements = []
 
