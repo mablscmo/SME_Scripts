@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-Version: 0.3
+Version: 0.3.1
 -----------------------------------------
 Plan:
     Ok, så planen är att du ger åtminstånde två inputs i början: element och jämförelse. Kanske skippar att ge jämförelse som input.
@@ -14,17 +14,18 @@ Plan:
 
     Man kanske kan skriva nån kod som hittar rätt resultatfil, eller resultat filer för specifika linjer. Skriv det som ett update kommando,  
     
-    Plan till diagnostic: ge input 'diagnostic' för allting, annars 'teff' 'logg' etc, sätt en if statement i PA som omdefinierar element till diagnostic
-    och frågar efter en extra element input. Kör en "If element in PlotInput: pl.PlotElement, If element in Diagnostics: pl.PlotDiagnostics"
 
 New in version 0.3:
     Renamed from PlotAbundances to PlotSME
     Complete optical sample implemented as background for the optical comparison, doesn't work on rap, rap still running 0.2.
     Implemented diagnostics, give "diag" as input to start comparison between IGRINS and optical results. Individual plots available.
-
+    
+    0.3.1
+    Fixed pandas and matplotlib code so that PlotSME can run on rap as well.
+    
 Top priority:
     Get the name of the element on the plots.
-    Create a all plots grop with coloured backgrounds.
+    Create an all plots grop with coloured backgrounds.
     
 
 """
@@ -38,8 +39,8 @@ import PlotFunctions as pl
 
 ###These are just the plotting parameters, so they become in this document
 plt.rcParams['font.size']= 16
-plt.rcParams['xtick.minor.visible'], plt.rcParams['xtick.top'] = True,True
-plt.rcParams['ytick.minor.visible'], plt.rcParams['ytick.right'] = True,True
+plt.rcParams['xtick.minor.visible'] = True
+plt.rcParams['ytick.minor.visible'] = True
 plt.rcParams['xtick.direction'], plt.rcParams['ytick.direction'] = 'in','in'
 plt.rcParams['xtick.labelsize'] = plt.rcParams['ytick.labelsize'] = 12
 plt.rcParams['axes.labelsize'] = 11
@@ -63,7 +64,7 @@ else:
 
 
 #Read in results files
-IGRINS_RESULTS = pd.read_csv(resdir+'result_H_val08_ni_20200314_175239.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
+IGRINS_RESULTS = pd.read_csv(resdir+'result_H_val08_na_20200324_232448.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
 OPTICAL_RESULTS = pd.read_csv(resdir+'result_optical_start_H_si_update.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
 OPTICAL_COMPLETE = pd.read_csv(resdir+'results_val08_all-correct.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
 IVALU_DATA = pd.read_csv(homedir+'IVALU_Results.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
@@ -71,9 +72,11 @@ IVALU_RESULTS = IVALU_DATA[IVALU_DATA['2MASS'].isin(IGRINS_RESULTS['2MASS'].valu
 APOGEE_RESULTS = pd.read_csv(homedir+'APOGEE_DATA.txt',names=APOGEE_Header,delim_whitespace=True)
 
 
-OPTICAL_DIF = IGRINS_RESULTS.drop(columns=DROP_LIST) - OPTICAL_RESULTS.drop(columns=DROP_LIST)
+OPTICAL_DIF = IGRINS_RESULTS.drop(DROP_LIST, axis=1) - OPTICAL_RESULTS.drop(DROP_LIST, axis=1)
 
 DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE]
+
+
 
 
 while True:
