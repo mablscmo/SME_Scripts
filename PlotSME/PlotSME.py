@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-Version: 0.3.1
+Version: 0.3.2
 -----------------------------------------
 Plan:
     Ok, så planen är att du ger åtminstånde två inputs i början: element och jämförelse. Kanske skippar att ge jämförelse som input.
@@ -22,6 +22,9 @@ New in version 0.3:
     
     0.3.1
     Fixed pandas and matplotlib code so that PlotSME can run on rap as well.
+    
+    0.3.2
+    Included odd element group
     
 Top priority:
     Get the name of the element on the plots.
