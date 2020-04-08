@@ -26,7 +26,7 @@ LineList = pd.read_csv('LineList.dat', index_col=False, names=ListHeader, skipro
 BroadeningHeader = ['Element','Ion','Lambda','Exc','loggf','DampGrade','DampSig','DampVel','W','Wobs','error','abund','not sure','Waals','CombName']
 BroadeningData = pd.read_csv('s4000_g+1.5_m1.0_t02_mc_z+0.00_a+0.00_c-0.13_n+0.31_o+0.00_r+0.00_s+0.00_H_abo.eqw', delim_whitespace=True, index_col=False, names=BroadeningHeader, skiprows=1)
 BroadeningData['Waals'] = np.floor(BroadeningData['DampSig'])+BroadeningData['DampVel'] #Combines values to SME format
-BroadeningData['CombName'] = "'" + BroadeningData['Element'] + ' ' + BroadeningData["Ion"].map(str) + "'" #Combines names to SME name
+BroadeningData['CombName'] = "'" + BroadeningData['Element'] + ' ' + BroadeningData["Ion"].map(str) + "'" #Combines names to mimic VALD format
 BroadeningValues = BroadeningData.loc[BroadeningData.Waals != 0] #Limits the document to where there is broadening data
 BVindex = BroadeningValues.index #Index of broadening values, this is probably stupid
 
