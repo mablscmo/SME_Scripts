@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.2.1
+Version: 0.4
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
 It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
@@ -13,13 +13,14 @@ WARNING: I don't know any IDL and what I think causes errors are based on 2 mont
     Maybe a system that automatically flags lines in the files with a comment after the final input? 
     Expect updates when I've learned something new or when I'm procrastinating.
 
-New in version 0.2:
-    SanityCheck searches through the linelist for linemasks containing none or multiple lines. Multiple lines causes trouble for astrophysical gf.
-        The linelist features requires pandas version '0.25.3' or higher (or maybe lower as well), so it doesn't work on rap.
-    SanityCheck checks which computer it is being run on and has saved directories. Maybe I remove the input and just tell people to update the file.
-    
-    0.2.1
-    Fixed a problem with the continuum/linemask intersection finder
+New in version 0.4:
+    Rewritten output file formatting code, now both simpler and formatts things properly.
+    Implemented a check for intersecting linemasks, also more messages for things getting checked.
+
+New in version 0.3:
+    Creates an output file for the linelist search with the strengths of the lines from the weak line approximation included.
+
+
 """
 
 import numpy as np
@@ -90,9 +91,34 @@ if len(EndCheck) != 0:
         print('{line} linemask ends before centre of line'.format(line=lmask[EndCheck[i-1],0]))
 
 if (len(InitCheck) == 0) & (len(EndCheck) == 0):
+    print('All linemask contain the central wavelength')
+
+"Checks for linemask intersections"
+LmaskFlat = lmask[:,[1,2]].flatten()
+LmaskCheck = np.all(np.diff(LmaskFlat) > 0)
+if LmaskCheck == False:
+    print('Linemasks overlap at: {lmaskind}'.format(lmaskind=LmaskFlat[np.where((np.diff(LmaskFlat) > 0)==False)]))
+else:
+    print('No linemasks overlap')
+
+
+"Check width of lmask, email Henrik to find critical length."
+lCrit = 0.3
+lLength = lmask[:,2] - lmask[:,1]
+LengthFlag = False
+for i in range(len(lLength)):
+    if lLength[i] < lCrit:
+        print('{line} linemask width = {lW}, recommended is {lC} Å'.format(line=lmask[i,0], lW=format(lLength[i],'.2f'), lC = lCrit))
+        LengthFlag = True
+if LengthFlag == False:
+    print('No linemasks too short')
+
+"Anything wrong?"
+if (len(InitCheck) == 0) & (len(EndCheck) == 0) & (LmaskCheck == True) & (LengthFlag == False):
     print('No issues found in linemasks')
 else:
     LmaskFlag = False
+
 print('\n')
 
   
@@ -103,10 +129,10 @@ print('Checking segments...')
 SegFlat = segment.flatten()
 SegCheck = np.all(np.diff(SegFlat) > 0)
 if SegCheck == False:
-    print('Segments overlap at: {segind}'.format(segind=SegFlat[np.where(np.diff(SegFlat) < 0)[0]]))
-if SegCheck == True:
+    print('Segments overlap at: {segind}'.format(segind=SegFlat[np.where((np.diff(SegFlat) > 0)==False)]))
+else:
     print('No segments overlap')
-
+    
 "Checks if each line in the linemask is in a segment."
 InSegFlag = True 
 for i in range(len(lmask)):
@@ -115,8 +141,11 @@ for i in range(len(lmask)):
         print('Linemask for {line} is not contained within a segment'.format(line=lmask[i,0]))
         InSegFlag = False
 if InSegFlag == True:
-    print('All linemasks have proper segments')    
+    print('All linemasks have proper segments')   
     
+if (SegCheck & InSegFlag) == True:
+    print('No issues found for the segments')
+
 print('\n')
 
 
@@ -151,13 +180,13 @@ for i in range(len(contmask)):
 
 
 if ContFlag == True:
-    print('All continuummasks are properly formatted\n')  
+    print('No issues found in the continuummasks\n')  
 
 
 "____________________________________Status report__________________________________"
 
 if (LmaskFlag & SegCheck & InSegFlag & ContFlag ) == True:
-    print('No problems detected')
+    print('No issues found in the masks')
 
 "____________________________________Linelist check__________________________________"
 n = 'n'
@@ -185,13 +214,19 @@ def logic(index):
         return False
     return True    
 
+def strength(gf, exc, T=5770):
+    return((10**gf)*np.exp(-exc/(T*8.6173*10**-5)))
+    
+
 
 ListHeader = ['EleIon','LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']
 LineList = pd.read_csv(lldir + LineListName + '.dat', index_col=False, names=ListHeader, skiprows= lambda x: logic(x))
 LineList[['Ele','Ion']] = LineList.EleIon.str.split(expand=True)
 LineList['Ele'] = LineList['Ele'].str.lower() + "'"
 LineList = LineList.drop(columns=['JLow', 'ExcHigh', 'JHigh', 'LandLower', 'LandUpper', 'LandMean', 'RadDamping', 'StarkDamp', 'WaalsDamp', 'CentralDepth'])
+LineList['strength'] = strength(LineList['loggf'],LineList['ExcLow'],5700)
 
+ReportFile = open("{el}_report.txt".format(el=element),"w+")
 
 MultLineCount = 0
 NoLineCount = 0
@@ -203,13 +238,21 @@ for i in range(len(lmask)):
     if len(LinesInMask) > 1:
         print('Multiple lines in linemask {lam}:'.format(lam=lmask[i,0]))
         print(LinesInMask)
+        ReportFile.write('Multiple lines in linemask {lam}:\n'.format(lam=lmask[i,0]))
+        for i in range(len(LinesInMask)):
+            InLine = LinesInMask.values[i]
+            ReportFile.write("{0: <8}   lam_air: {1} AA     log gf:{2: >8}     Exc:{3: >7} eV     strength: {4}\n".format(InLine[0], format(InLine[1],'.3f'), format(InLine[2],'.3f'), format(InLine[3],'.3f'), "{:.3e}".format(InLine[4])))
         MultLinesFlag = True
         MultLineCount += 1
+        ReportFile.write("\n")
     if len(LinesInMask) == 0:
         print('No line found in the linelist for linemask at {lam}'.format(lam=lmask[i,0]))
+        ReportFile.write('No line found in the linelist for linemask at {lam}\n'.format(lam=lmask[i,0]))
         NoLinesFlag = True
         NoLineCount += 1
-        
+        ReportFile.write("\n")
+    
+ReportFile.close()
 print('\n')
 if MultLinesFlag == False:
     print('No additional lines found within the linemasks')
