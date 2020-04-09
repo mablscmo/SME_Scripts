@@ -48,6 +48,7 @@ for i in range(len(BroadeningValues)):
 #Create a new linelist and open the old one for reading
 NewFile = open("NewLineList.dat","w+")
 Other = open("LineList.dat","r")
+TotLength = len(LineList)*4 + 3 
 
 #Keep track of where in the imported dataframe you are
 count=0
