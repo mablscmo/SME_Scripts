@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.4
+Version: 0.4.1
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
 It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
@@ -15,7 +15,13 @@ WARNING: I don't know any IDL and what I think causes errors are based on 2 mont
 
 New in version 0.4:
     Rewritten output file formatting code, now both simpler and formatts things properly.
-    Implemented a check for intersecting linemasks, also more messages for things getting checked.
+    Implemented a check for intersecting linemasks, a check for the length of linemasks (the precise minimum length is a guess, I don't think it's
+    a hard limit).
+    More messages for things getting checked.
+    
+    0.4.1:
+        Cleanup of formatting, hopefully everything is clearer.
+        Minor change for [y/n] check.
 
 New in version 0.3:
     Creates an output file for the linelist search with the strengths of the lines from the weak line approximation included.
@@ -27,11 +33,7 @@ import numpy as np
 import pandas as pd
 import socket
 
-"Optional input statements that will be integrated in a future version"
-# instrument = input('Which instrument are you working with? (no caps please): ')
-# print 'Working with {inst}'.format(inst=instrument)
-
-
+"_____________________________________Set up directories_______________________________________"
 #Check computer to see if it is known or if manual selection of directories is needed
 Computer = socket.gethostname()
 if  Computer == 'ValorToMe':
@@ -50,17 +52,17 @@ else:
     lmaskdir = input('What is your linemask directory?: ')
     cmaskdir = input('What is your continuummask directory?: ')
     lldir = input('What is your linelist directory?: ')
-    print('Please update the SanityCheck.py file with your directories, you are ment to preserve sanity, not lose it.')
-
-
-al,c,ca,ce,co,cr,cu,fe,ge,hf,k,mg,mn,na,nd,ni,p,rb,s,sc,si,ti,v,y,yb = 'al','c','ca','ce','co','cr','cu','fe','ge','hf','k','mg','mn','na','nd','ni','p','rb','s','sc','si','ti','v','y','yb'
-Al,C,Ca,Ce,Co,Cr,Cu,Fe,Ge,Hf,K,Mg,Mn,Na,Nd,Ni,P,Rb,S,Sc,Si,Ti,V,Y,Yb = 'al','c','ca','ce','co','cr','cu','fe','ge','hf','k','mg','mn','na','nd','ni','p','rb','s','sc','si','ti','v','y','yb'
-
-"Change these to your filenames. Filenames not structured as element_instrument_list.dat are currently not supported."
+    print('Please update the SanityCheck.py file with your directories, you are meant to preserve sanity, not lose it.')
+    
+"Change this to suit your filenames. Filenames not structured as element_instrument_list.dat are currently not supported."
 instrument = 'igrinsh'
 
+"__________________________________Pick element & find files____________________________________"
+"Choose element. Future version might have a whattodo input that enables different functionalities, changing directories, editing which things are being checked etc."
+Elements = ['al','c','ca','ce','co','cr','cu','fe','ge','hf','k','mg','mn','na','nd','ni','p','rb','s','sc','si','ti','v','y','yb']
+al,c,ca,ce,co,cr,cu,fe,ge,hf,k,mg,mn,na,nd,ni,p,rb,s,sc,si,ti,v,y,yb = Elements
+Al,C,Ca,Ce,Co,Cr,Cu,Fe,Ge,Hf,K,Mg,Mn,Na,Nd,Ni,P,Rb,S,Sc,Si,Ti,V,Y,Yb = Elements
 
-"Choose element. Future version might hve a whattodo input that enables different functionalities, changing directories, editing which things are being checked etc."
 while True:
     try:
             element = input('Which element are you sanity checking? ')
@@ -76,11 +78,13 @@ segment = np.loadtxt('{ldir}{ele}_{inst}_seg.dat'.format(ldir=lmaskdir, ele=elem
 contmask = np.loadtxt('{cdir}{inst}_automatic_cmask.dat'.format(cdir=cmaskdir, inst=instrument),comments=';')
 
 
+
 "____________________________________Checking linemasks_______________________________________"
 print('Checking linemasks...')
 LmaskFlag = True
 
-"Checks if the central wavelength is outside the linemask, this might not actually be a problem for certain situations and almost certainly does not cause errors, but it might be an ok problem indicator. If it's removed in a later version, it isn't."
+'''Checks if the central wavelength is outside the linemask, this might not actually be a problem for certain situations 
+and almost certainly does not cause errors, but it might be an ok problem indicator. If it's removed in a later version, it isn't.'''
 InitCheck = np.where(lmask[:,0]<lmask[:,1])[0]
 if len(InitCheck) != 0:
     for i in range(len(InitCheck)):
@@ -89,9 +93,9 @@ EndCheck = np.where(lmask[:,0]>lmask[:,2])[0]
 if len(EndCheck) != 0:
     for i in range(len(EndCheck)):
         print('{line} linemask ends before centre of line'.format(line=lmask[EndCheck[i-1],0]))
-
 if (len(InitCheck) == 0) & (len(EndCheck) == 0):
     print('All linemask contain the central wavelength')
+
 
 "Checks for linemask intersections"
 LmaskFlat = lmask[:,[1,2]].flatten()
@@ -113,6 +117,7 @@ for i in range(len(lLength)):
 if LengthFlag == False:
     print('No linemasks too short')
 
+
 "Anything wrong?"
 if (len(InitCheck) == 0) & (len(EndCheck) == 0) & (LmaskCheck == True) & (LengthFlag == False):
     print('No issues found in linemasks')
@@ -133,6 +138,7 @@ if SegCheck == False:
 else:
     print('No segments overlap')
     
+
 "Checks if each line in the linemask is in a segment."
 InSegFlag = True 
 for i in range(len(lmask)):
@@ -142,7 +148,9 @@ for i in range(len(lmask)):
         InSegFlag = False
 if InSegFlag == True:
     print('All linemasks have proper segments')   
-    
+
+
+"Anything wrong?"    
 if (SegCheck & InSegFlag) == True:
     print('No issues found for the segments')
 
@@ -153,7 +161,8 @@ print('\n')
 print('Checking continuummasks...')
 ContFlag = True 
 
-"Checks if any continuum masks overlap, don't think it causes errors, but is unnecessary."
+
+"Checks if any continuum masks overlap, don't think it causes errors, but it's unnecessary."
 ContFlat = contmask.flatten()
 ContFlatCheck = np.all(np.diff(ContFlat) > 0)
 if ContFlatCheck == False:
@@ -162,12 +171,14 @@ if ContFlatCheck == False:
 if ContFlatCheck == True:
     print('No continuummasks overlap')
 
+
 "Checks  if continuummask intersects segment edges. This definitely causes errors."
 for i in range(len(contmask)):
     ContCheck = np.any([(contmask[i,0]<segment[:,1])&(contmask[i,1]>segment[:,1]),(contmask[i,0]<segment[:,0])&(contmask[i,1]>segment[:,0])],axis=1)
     if np.any(ContCheck) == True:
         print('Continuummask at {cont} intersects the segmentborder'.format(cont=contmask[i,0]))
         ContFlag = False
+
 
 "Checks  if continuummask intersects linemask edges. Not sure if it causes errors, but it would seem counterintuitive that a section is both line and continuum."
 for i in range(len(contmask)):
@@ -179,35 +190,34 @@ for i in range(len(contmask)):
         ContFlag = False
 
 
+"Anything wrong?"
 if ContFlag == True:
     print('No issues found in the continuummasks\n')  
 
 
 "____________________________________Status report__________________________________"
-
 if (LmaskFlag & SegCheck & InSegFlag & ContFlag ) == True:
     print('No issues found in the masks')
 
-"____________________________________Linelist check__________________________________"
-n = 'n'
-N = 'n'
-no = 'n'
 
+"____________________________________Linelist check__________________________________"
 while True:
     try:
-            ynq = eval(input('Do you want to check the linelist? [y/n]: '))
+            ynq = input('Do you want to check the linelist? [y/n]: ')
     except NameError:
         print('Input not recogniced')
         continue
     break
 
-if ynq == 'n':
+if ynq in ['n','N','no','No','NO']:
     raise SystemExit('Linelist not checked')
 
 NoLinesFlag = False
 MultLinesFlag = False
 
+"______________________________________Functions_____________________________________"
 def logic(index):
+    '''Sorts the VALD linelist file, first three rows are header, every fourth row contains data, the rest are atomic physics and references '''
     if index in [0, 1, 2]:
         return(True)
     elif (index-3) % 4 == 0:
@@ -215,16 +225,24 @@ def logic(index):
     return True    
 
 def strength(gf, exc, T=5770):
+    '''Determines the strength of spectral lines using the weak-line approximation. Only works for lines of the same element and ionisationstage. 
+    Takes the gf value and the excitation energy [eV] as inputs, temperature is also needed, set to 5770 K by default to mimic the Sun. '''
     return((10**gf)*np.exp(-exc/(T*8.6173*10**-5)))
-    
 
 
+"______________________________Reads in linelist_____________________________________"
 ListHeader = ['EleIon','LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']
 LineList = pd.read_csv(lldir + LineListName + '.dat', index_col=False, names=ListHeader, skiprows= lambda x: logic(x))
+
 LineList[['Ele','Ion']] = LineList.EleIon.str.split(expand=True)
 LineList['Ele'] = LineList['Ele'].str.lower() + "'"
 LineList = LineList.drop(columns=['JLow', 'ExcHigh', 'JHigh', 'LandLower', 'LandUpper', 'LandMean', 'RadDamping', 'StarkDamp', 'WaalsDamp', 'CentralDepth'])
 LineList['strength'] = strength(LineList['loggf'],LineList['ExcLow'],5700)
+
+
+"_______________________Checks linelist and writes report file_______________________"
+'''Goes through ther linemask to identify which lines are of interest. If there are multiple lines, it lets yuo know and adds the lines
+to a report file. Also alerts and writes down linemasks that do not contain any lines of the correct element.'''
 
 ReportFile = open("{el}_report.txt".format(el=element),"w+")
 
@@ -251,8 +269,10 @@ for i in range(len(lmask)):
         NoLinesFlag = True
         NoLineCount += 1
         ReportFile.write("\n")
-    
+
 ReportFile.close()
+
+"_____________________________________Final status___________________________________"
 print('\n')
 if MultLinesFlag == False:
     print('No additional lines found within the linemasks')
