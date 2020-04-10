@@ -20,7 +20,7 @@ def logic(index):
 "___________________________________Actual linelist that we want to modify___________________________________"
 ListHeader = ['EleIon','LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']
 LineList = pd.read_csv('LineList.dat', index_col=False, names=ListHeader, skiprows= lambda x: logic(x))
-
+TotLength = len(LineList)*4 + 3 
 
 "______________________________________________Broadening data______________________________________________"
 BroadeningHeader = ['Element','Ion','Lambda','Exc','loggf','DampGrade','DampSig','DampVel','W','Wobs','error','abund','not sure','Waals','CombName']
@@ -48,7 +48,6 @@ for i in range(len(BroadeningValues)):
 #Create a new linelist and open the old one for reading
 NewFile = open("NewLineList.dat","w+")
 Other = open("LineList.dat","r")
-TotLength = len(LineList)*4 + 3 
 
 #Keep track of where in the imported dataframe you are
 count=0
