@@ -7,7 +7,7 @@ strong lines (you define what strong means based on testing). Also uses a VALD l
 BroadeningAdder has already created a VALD linelist that we can use.
 
 todo: when pandas is on rap, add a directory line with input. This requires changing names, remember that.
-    create alternate logic function that picks out the references and can find all the astr lines
+    create alternate logic function that picks out the references and can find all the astr lines+
 """
 
 import numpy as np
@@ -24,7 +24,7 @@ def logic(index):
 
 def strength(gf, exc, T=5770):
     '''Determines the strength of spectral lines using the weak-line approximation. Only works for lines of the same element
-    and ionisationstage. Takes the gf value and the excitation energy as inputs, temperature is also needed, set to 5770 by 
+    and ionisationstage. Takes the gf value and the excitation energy [eV] as inputs, temperature is also needed, set to 5770 by 
     default to mimic the Sun. '''
     return((10**gf)*np.exp(-exc/(T*8.6173*10**-5)))
     
@@ -147,7 +147,7 @@ for i in range(TotLength):
         
         #format() creates the appropriate number of decimals, better than round()
         element = Data[0] + ','
-        lam=format(Data[1],'.3f')
+        lam = format(Data[1],'.3f')
         gf = format(Data[2],'.3f')
         El = format(Data[3],'.4f')
         Jlow = Data[4]
