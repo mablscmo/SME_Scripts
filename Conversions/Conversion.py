@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-04-158
 author: Martin Montelius
-Version: 0.1
+Version: 0.1.1
 -----------------------------------------
 
 Conversions between wavenumber in cm**-1 and wavelengths in Å for both vacuum and air.
@@ -76,7 +76,10 @@ def nr_to_wl(wnr,vta_constants=ciddor96):
         return(np.array(wl))
 
 
-def inv_to_ev(inv):
-    if isinstance(inv,(list,tuple)):
+def inv_to_ev(inv,upper=None):
+    if isinstance(inv,(list,tuple,float,int)):
         inv = np.array(inv)        
+    if upper != None:
+       upper = np.array(upper)
+       inv = np.stack((inv,upper))
     return(inv/8065.544)
