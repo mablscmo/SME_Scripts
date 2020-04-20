@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.4.1
+Version: 0.4.2
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
 It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
@@ -22,6 +22,11 @@ New in version 0.4:
     0.4.1:
         Cleanup of formatting, hopefully everything is clearer.
         Minor change for [y/n] check.
+    
+    0.4.2:
+        Output file now indicates which line is the strongest with *** and lines stronger than a threshold with *. Change the threshold 
+        by changing the Tolerance parameter (no plan to make it an input), 100 means lines stronger than 1/100th of the main lines 
+        strength will get marked. Remember different ionisationstages are not handled correctly.
 
 New in version 0.3:
     Creates an output file for the linelist search with the strengths of the lines from the weak line approximation included.
@@ -201,13 +206,19 @@ if (LmaskFlag & SegCheck & InSegFlag & ContFlag ) == True:
 
 
 "____________________________________Linelist check__________________________________"
-while True:
-    try:
-            ynq = input('Do you want to check the linelist? [y/n]: ')
-    except NameError:
-        print('Input not recogniced')
-        continue
-    break
+if Computer != 'rap':
+    while True:
+        try:
+                ynq = input('Do you want to check the linelist? [y/n]: ')
+        except NameError:
+            print('Input not recogniced')
+            continue
+        break
+else:
+    ynq = 'n'
+    print('\n')
+    print("Can't check the linelist on rap at the moment due to pandas limitations")
+
 
 if ynq in ['n','N','no','No','NO']:
     raise SystemExit('Linelist not checked')
@@ -248,6 +259,7 @@ ReportFile = open("{el}_report.txt".format(el=element),"w+")
 
 MultLineCount = 0
 NoLineCount = 0
+Tolerance = 100
 for i in range(len(lmask)):
     start = lmask[i,1]
     stop = lmask[i,2]
@@ -256,10 +268,16 @@ for i in range(len(lmask)):
     if len(LinesInMask) > 1:
         print('Multiple lines in linemask {lam}:'.format(lam=lmask[i,0]))
         print(LinesInMask)
+        MaxStrength = LinesInMask.strength.max()
         ReportFile.write('Multiple lines in linemask {lam}:\n'.format(lam=lmask[i,0]))
         for i in range(len(LinesInMask)):
+            StrengthFlag = ''
+            if LinesInMask.strength.iloc[i] == MaxStrength:
+                StrengthFlag = '***'
+            elif LinesInMask.strength.iloc[i] > MaxStrength/Tolerance:
+                StrengthFlag = '*'
             InLine = LinesInMask.values[i]
-            ReportFile.write("{0: <8}   lam_air: {1} AA     log gf:{2: >8}     Exc:{3: >7} eV     strength: {4}\n".format(InLine[0], format(InLine[1],'.3f'), format(InLine[2],'.3f'), format(InLine[3],'.3f'), "{:.3e}".format(InLine[4])))
+            ReportFile.write("{0: <8}   lam_air: {1} AA     log gf:{2: >8}     Exc:{3: >7} eV     strength: {4}  {5}\n".format(InLine[0], format(InLine[1],'.3f'), format(InLine[2],'.3f'), format(InLine[3],'.3f'), "{:.3e}".format(InLine[4]), StrengthFlag))
         MultLinesFlag = True
         MultLineCount += 1
         ReportFile.write("\n")
