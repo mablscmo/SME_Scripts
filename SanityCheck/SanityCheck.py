@@ -267,6 +267,7 @@ ReportFile = open("{}_report.txt".format(element),"w+")
 MultLineCount = 0
 NoLineCount = 0
 Tolerance = 100
+TolCount = 0
 for i in range(len(lmask)):
     start = lmask[i,1]
     stop = lmask[i,2]
@@ -283,6 +284,7 @@ for i in range(len(lmask)):
                 StrengthFlag = '***'
             elif LinesInMask.strength.iloc[i] > MaxStrength/Tolerance:
                 StrengthFlag = '*'
+                TolCount += 1
             InLine = LinesInMask.values[i]
             ReportFile.write("{0: <8}   lam_air: {1} AA     log gf:{2: >8}     Exc:{3: >7} eV     strength: {4}  {5}\n".format(InLine[0], format(InLine[1],'.3f'), format(InLine[2],'.3f'), format(InLine[3],'.3f'), "{:.3e}".format(InLine[4]), StrengthFlag))
         MultLinesFlag = True
@@ -295,6 +297,7 @@ for i in range(len(lmask)):
         NoLineCount += 1
         ReportFile.write("\n")
 
+ReportFile.write('{} linemasks contain secondary lines crossing the strength threshold of 1/{}'.format(TolCount,Tolerance))
 ReportFile.close()
 
 "_____________________________________Final status___________________________________"
@@ -303,6 +306,7 @@ if MultLinesFlag == False:
     print('No additional lines found within the linemasks')
 else:
     print('{count}/{tot} linemasks with multiple lines'.format(count=MultLineCount, tot = len(lmask)))
+    print('{} linemasks contain secondary lines crossing the strength threshold of 1/{}'.format(TolCount,Tolerance))
 
 if NoLinesFlag == False:
     print('No linemasks without lines')
