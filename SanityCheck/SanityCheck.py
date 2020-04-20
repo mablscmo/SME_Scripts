@@ -2,12 +2,12 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.4.2
+Version: 0.4.3
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
 It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
 
-WARNING: I don't know any IDL and what I think causes errors are based on 2 months of experience. 
+WARNING: I don't know any IDL and what I think causes errors are based on 3 months of experience. 
     Future plans include: creating a settings file so you can switch between different profiles looking for different things and different directories;
     Creating a proper output file with helpful formatting and (maybe) suggested edits;
     Maybe a system that automatically flags lines in the files with a comment after the final input? 
@@ -27,6 +27,11 @@ New in version 0.4:
         Output file now indicates which line is the strongest with *** and lines stronger than a threshold with *. Change the threshold 
         by changing the Tolerance parameter (no plan to make it an input), 100 means lines stronger than 1/100th of the main lines 
         strength will get marked. Remember different ionisationstages are not handled correctly.
+    
+    0.4.3:
+        Continuummask checking output now gives you actually useful information on the mask. Something that actually tells you where 
+        the overlap is, not yet implemented or planned. 
+        Formatting cleanup.
 
 New in version 0.3:
     Creates an output file for the linelist search with the strengths of the lines from the weak line approximation included.
@@ -75,7 +80,7 @@ while True:
         print('Element not recogniced, check spelling or edit the code if we got a new element')
         continue
     break
-print('Checking {ele}...\n'.format(ele=element))
+print('Checking {}...\n'.format(element))
 
 "Reads in files for checking"
 lmask = np.loadtxt('{ldir}{ele}_{inst}_lmask.dat'.format(ldir=lmaskdir, ele=element, inst=instrument),comments=';')
@@ -93,11 +98,11 @@ and almost certainly does not cause errors, but it might be an ok problem indica
 InitCheck = np.where(lmask[:,0]<lmask[:,1])[0]
 if len(InitCheck) != 0:
     for i in range(len(InitCheck)):
-        print('{line} linemask starts after centre of line'.format(line=lmask[InitCheck[i-1],0]))
+        print('{} linemask starts after centre of line'.format(lmask[InitCheck[i-1],0]))
 EndCheck = np.where(lmask[:,0]>lmask[:,2])[0]
 if len(EndCheck) != 0:
     for i in range(len(EndCheck)):
-        print('{line} linemask ends before centre of line'.format(line=lmask[EndCheck[i-1],0]))
+        print('{} linemask ends before centre of line'.format(lmask[EndCheck[i-1],0]))
 if (len(InitCheck) == 0) & (len(EndCheck) == 0):
     print('All linemask contain the central wavelength')
 
@@ -106,7 +111,7 @@ if (len(InitCheck) == 0) & (len(EndCheck) == 0):
 LmaskFlat = lmask[:,[1,2]].flatten()
 LmaskCheck = np.all(np.diff(LmaskFlat) > 0)
 if LmaskCheck == False:
-    print('Linemasks overlap at: {lmaskind}'.format(lmaskind=LmaskFlat[np.where((np.diff(LmaskFlat) > 0)==False)]))
+    print('Linemasks overlap at: {}'.format(LmaskFlat[np.where((np.diff(LmaskFlat) > 0)==False)]))
 else:
     print('No linemasks overlap')
 
@@ -117,7 +122,7 @@ lLength = lmask[:,2] - lmask[:,1]
 LengthFlag = False
 for i in range(len(lLength)):
     if lLength[i] < lCrit:
-        print('{line} linemask width = {lW}, recommended is {lC} Å'.format(line=lmask[i,0], lW=format(lLength[i],'.2f'), lC = lCrit))
+        print('{} linemask width = {}, recommended is {} Å'.format(lmask[i,0], format(lLength[i],'.2f'), lCrit))
         LengthFlag = True
 if LengthFlag == False:
     print('No linemasks too short')
@@ -139,7 +144,7 @@ print('Checking segments...')
 SegFlat = segment.flatten()
 SegCheck = np.all(np.diff(SegFlat) > 0)
 if SegCheck == False:
-    print('Segments overlap at: {segind}'.format(segind=SegFlat[np.where((np.diff(SegFlat) > 0)==False)]))
+    print('Segments overlap at: {}'.format(SegFlat[np.where((np.diff(SegFlat) > 0)==False)]))
 else:
     print('No segments overlap')
     
@@ -149,7 +154,7 @@ InSegFlag = True
 for i in range(len(lmask)):
     InSegCheck = np.any((lmask[i,1]>segment[:,0])&(lmask[i,2]<segment[:,1]))
     if InSegCheck == False:
-        print('Linemask for {line} is not contained within a segment'.format(line=lmask[i,0]))
+        print('Linemask for {} is not contained within a segment'.format(lmask[i,0]))
         InSegFlag = False
 if InSegFlag == True:
     print('All linemasks have proper segments')   
@@ -171,7 +176,7 @@ ContFlag = True
 ContFlat = contmask.flatten()
 ContFlatCheck = np.all(np.diff(ContFlat) > 0)
 if ContFlatCheck == False:
-    print('Continuummasks overlap at: {contind}'.format(contind=ContFlat[np.where(np.diff(ContFlat) < 0)[0]]))
+    print('Continuummasks overlap at: {}'.format(ContFlat[np.where(np.diff(ContFlat) < 0)[0]]))
     ContFlag = False
 if ContFlatCheck == True:
     print('No continuummasks overlap')
@@ -181,7 +186,9 @@ if ContFlatCheck == True:
 for i in range(len(contmask)):
     ContCheck = np.any([(contmask[i,0]<segment[:,1])&(contmask[i,1]>segment[:,1]),(contmask[i,0]<segment[:,0])&(contmask[i,1]>segment[:,0])],axis=1)
     if np.any(ContCheck) == True:
-        print('Continuummask at {cont} intersects the segmentborder'.format(cont=contmask[i,0]))
+        InterruptedSegment = np.where((contmask[i,0]<segment[:,1])&(contmask[i,1]>segment[:,1]) | (contmask[i,0]<segment[:,0])&(contmask[i,1]>segment[:,0]))[0]
+        for j in range(len(InterruptedSegment)):
+            print('Continuummask {} intersects the segmentborder at {}'.format(contmask[i],segment[InterruptedSegment][j]))
         ContFlag = False
 
 
@@ -190,8 +197,8 @@ for i in range(len(contmask)):
     ContLineCheck = np.any([(contmask[i,0]<lmask[:,2])&(contmask[i,1]>lmask[:,2]),(contmask[i,0]<lmask[:,1])&(contmask[i,1]>lmask[:,1])],axis=1)
     if np.any(ContLineCheck) == True:
         InterruptedLine = np.where((contmask[i,0]<lmask[:,2])&(contmask[i,1]>lmask[:,2]) | (contmask[i,0]<lmask[:,1])&(contmask[i,1]>lmask[:,1]))[0]
-        # print(InterruptedLine, i)
-        print('Continuummask at {cont} intersects the linemask for {line}'.format(cont=format(contmask[i,0],'.3f'), line=lmask[InterruptedLine,0]))
+        for j in range(len(InterruptedLine)):
+            print('Continuummask at {} intersects the linemask for {}'.format(contmask[i], lmask[InterruptedLine,0][j]))
         ContFlag = False
 
 
@@ -255,7 +262,7 @@ LineList['strength'] = strength(LineList['loggf'],LineList['ExcLow'],5700)
 '''Goes through ther linemask to identify which lines are of interest. If there are multiple lines, it lets yuo know and adds the lines
 to a report file. Also alerts and writes down linemasks that do not contain any lines of the correct element.'''
 
-ReportFile = open("{el}_report.txt".format(el=element),"w+")
+ReportFile = open("{}_report.txt".format(element),"w+")
 
 MultLineCount = 0
 NoLineCount = 0
@@ -266,10 +273,10 @@ for i in range(len(lmask)):
     LinesInMask = LineList[(LineList['LambdaAir']>=start) & (LineList['LambdaAir']<=stop) & (LineList['Ele'].values == "'" + element + "'")]
     LinesInMask = LinesInMask.drop(columns=['Ele', 'Ion'])
     if len(LinesInMask) > 1:
-        print('Multiple lines in linemask {lam}:'.format(lam=lmask[i,0]))
+        print('Multiple lines in linemask {}:'.format(lmask[i,0]))
         print(LinesInMask)
         MaxStrength = LinesInMask.strength.max()
-        ReportFile.write('Multiple lines in linemask {lam}:\n'.format(lam=lmask[i,0]))
+        ReportFile.write('Multiple lines in linemask {}:\n'.format(lmask[i,0]))
         for i in range(len(LinesInMask)):
             StrengthFlag = ''
             if LinesInMask.strength.iloc[i] == MaxStrength:
@@ -282,8 +289,8 @@ for i in range(len(lmask)):
         MultLineCount += 1
         ReportFile.write("\n")
     if len(LinesInMask) == 0:
-        print('No line found in the linelist for linemask at {lam}'.format(lam=lmask[i,0]))
-        ReportFile.write('No line found in the linelist for linemask at {lam}\n'.format(lam=lmask[i,0]))
+        print('No line found in the linelist for linemask at {}'.format(lmask[i,0]))
+        ReportFile.write('No line found in the linelist for linemask at {}\n'.format(lmask[i,0]))
         NoLinesFlag = True
         NoLineCount += 1
         ReportFile.write("\n")
