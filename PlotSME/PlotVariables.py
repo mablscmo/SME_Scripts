@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.3.2
+Version: 0.3.3
 -----------------------------------------
 Text info for the PlotAbundances code
 """
