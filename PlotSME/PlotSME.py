@@ -26,6 +26,9 @@ New in version 0.3:
     0.3.2
     Included odd element group
     
+    0.3.3
+    Formatting cleanup
+    
 Top priority:
     Get the name of the element on the plots.
     Create an all plots grop with coloured backgrounds.
@@ -91,7 +94,7 @@ while True:
         break  
     elif (element in PlotInput) and (diagFlag == False):
         pl.PlotElement(element, DATA, plotdir)
-        print('Plotted {el}'.format(el=element))
+        print('Plotted {}'.format(element))
     elif (element in Diagnostics) or (diagFlag == True):
         print('\n Diagnosing...')
         if diagFlag == False:
