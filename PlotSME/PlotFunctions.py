@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.3.2
+Version: 0.3.3
 -----------------------------------------
 Functions for the PlotAbundances code
 """
@@ -34,8 +34,8 @@ def PlotInternal(subject,row,rows):
             ax[i].set_xlim([-2,1])
             ax[i].set_ylim([-1,1])
             ax[i].set_xlabel('[Fe/H]')
-            ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=subject)].values,'.',color='crimson',label='IGRINS')
-            ax[i].plot(Comparison[i]['[Fe/H]'].values,Comparison[i]['{el}'.format(el=subject)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+            ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(subject)].values,'.',color='crimson',label='IGRINS')
+            ax[i].plot(Comparison[i]['[Fe/H]'].values,Comparison[i]['{}'.format(subject)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
             ax[i].legend(loc='lower left',fancybox=True, numpoints=1)    
     else:
         for i in range(3):
@@ -44,8 +44,8 @@ def PlotInternal(subject,row,rows):
             ax[row,i].set_xlim([-2,1])
             ax[row,i].set_ylim([-1,1])
             ax[row,i].set_xlabel('[Fe/H]')
-            ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=subject)].values,'.',color='crimson',label='IGRINS')
-            ax[row,i].plot(Comparison[i]['[Fe/H]'].values,Comparison[i]['{el}'.format(el=subject)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+            ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(subject)].values,'.',color='crimson',label='IGRINS')
+            ax[row,i].plot(Comparison[i]['[Fe/H]'].values,Comparison[i]['{}'.format(subject)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
             ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1)         
 
 def PlotElement(element, DATA, plotdir):
@@ -55,16 +55,16 @@ def PlotElement(element, DATA, plotdir):
         fig, ax = plt.subplots(1, 3, figsize=(21, 5))
        
         for i in range(3):
-            ax[i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=element)].values,'.',color='silver',label='Complete optical')
+            ax[i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(element)].values,'.',color='silver',label='Complete optical')
             ax[i].axvline(0,0,1, color='0.75', linestyle='dashed')
             ax[i].axhline(0,0,1, color='0.75', linestyle='dashed')
             ax[i].set_xlim([-2,1])
             ax[i].set_ylim([-1,1])
             ax[i].set_xlabel('[Fe/H]')
-            ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=element)].values,'.',color='black',label='IGRINS')
-            ax[i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{el}'.format(el=element)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+            ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(element)].values,'.',color='black',label='IGRINS')
+            ax[i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(element)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
             ax[i].legend(loc='lower left',fancybox=True, numpoints=1) 
-        ax[0].set_ylabel('[{ele}/Fe]'.format(ele=element))
+        ax[0].set_ylabel('[{}/Fe]'.format(element))
         plt.tight_layout()
         plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)   
         plt.draw()
@@ -75,16 +75,16 @@ def PlotElement(element, DATA, plotdir):
         for row in range(len(AlphaElements)):
             
             for i in range(3):
-                ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=AlphaElements[row])].values,'.',color='silver',label='Complete optical')
+                ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(AlphaElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
-                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=AlphaElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{el}'.format(el=AlphaElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(AlphaElements[row])].values,'.',color='black',label='IGRINS')
+                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(AlphaElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{el}/Fe]'.format(el=AlphaElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(AlphaElements[row]))   
         plt.tight_layout()
         plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)
         plt.draw()
@@ -95,16 +95,16 @@ def PlotElement(element, DATA, plotdir):
         for row in range(len(OddElements)):
             
             for i in range(3):
-                ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=OddElements[row])].values,'.',color='silver',label='Complete optical')
+                ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(OddElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
-                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=OddElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{el}'.format(el=OddElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(OddElements[row])].values,'.',color='black',label='IGRINS')
+                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(OddElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{el}/Fe]'.format(el=OddElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(OddElements[row]))   
         plt.tight_layout()
         plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)
         plt.draw()
@@ -121,10 +121,10 @@ def PlotElement(element, DATA, plotdir):
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
-                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=IronElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{el}'.format(el=IronElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(IronElements[row])].values,'.',color='black',label='IGRINS')
+                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(IronElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{el}/Fe]'.format(el=IronElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(IronElements[row]))   
         plt.tight_layout()
         plt.savefig(plotdir+element+'.pdf',dpi=500)
         plt.draw()
@@ -134,17 +134,17 @@ def PlotElement(element, DATA, plotdir):
     if element == 'Neutron_capture':
         fig, ax = plt.subplots(len(NeutronElements), 3, figsize=(21, len(NeutronElements)*4))
         for row in range(len(NeutronElements)):
-            ax[0].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=NeutronElements[row])].values,'.',color='silver',label='Complete optical')
+            ax[0].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(NeutronElements[row])].values,'.',color='silver',label='Complete optical')
             for i in range(3):
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
-                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{el}'.format(el=NeutronElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{el}'.format(el=NeutronElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(NeutronElements[row])].values,'.',color='black',label='IGRINS')
+                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(NeutronElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{el}/Fe]'.format(el=NeutronElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(NeutronElements[row]))   
         plt.tight_layout()
         plt.savefig(plotdir+element+'.pdf',dpi=500)
         plt.draw()
@@ -165,7 +165,7 @@ def PlotDiagnostics(element, diag, DATA, DIF_DATA, plotdir):
             ax[i].set_xlim(DiagLimits[i])
             ax[i].set_ylim([-1,1])
             ax[i].set_xlabel(Diagnostics[i+1])
-            ax[i].plot(IGRINS_RESULTS[Diagnostics[i+1]].values,DIF_DATA['{el}'.format(el=element)].values,'.',markersize=10,color=DiagColours[i])
+            ax[i].plot(IGRINS_RESULTS[Diagnostics[i+1]].values,DIF_DATA['{}'.format(element)].values,'.',markersize=10,color=DiagColours[i])
         ax[0].set_ylabel(r'[{ele}/Fe]$_{{IGRINS}}$-[{ele}/Fe]$_{{OPTICAL}}$'.format(ele=element))
         plt.tight_layout()
         plt.savefig(plotdir+diag+'_'+element+'.pdf',dpi=500)   
