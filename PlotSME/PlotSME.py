@@ -2,32 +2,32 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-Version: 0.3.2
+Version: 0.4
 -----------------------------------------
 Plan:
     Ok, så planen är att du ger åtminstånde två inputs i början: element och jämförelse. Kanske skippar att ge jämförelse som input.
     
-    Element kan vara vilket som helst av de olika elementen eller en elementgrupp, alpha, iron-peak eller neutron capture (fråga efter fler grupper). 
+    Element kan vara vilket som helst av de olika elementen eller en elementgrupp, alpha, odd, iron-peak eller neutron capture (fråga efter fler grupper). 
 
     Jämförelse parametern säger vad det ska plottas mot, kolumnerna ifall det är en grupplot. Jag tänker "optical", "Ivalu", "APOGEE", "all", "none",
     men också en specialare, "other", som promptar att du ger ett annat element som du plottar mot. Kanske kan implementera som ett "compare" kommando.
 
     Man kanske kan skriva nån kod som hittar rätt resultatfil, eller resultat filer för specifika linjer. Skriv det som ett update kommando,  
     
-
-New in version 0.3:
-    Renamed from PlotAbundances to PlotSME
-    Complete optical sample implemented as background for the optical comparison, doesn't work on rap, rap still running 0.2.
-    Implemented diagnostics, give "diag" as input to start comparison between IGRINS and optical results. Individual plots available.
+New in version 0.4:
+    A tentative implementation of choosing what to compare to is implemented:
+        Give 'comp' as a command to see options and choose which datasets should be compared to. 
+        So far the code only works when at least 2 different comparisons are made. 
+        You can change the comparison from the Comparison parameter to not have to do it every time.
+        You can only change comparison once via the comp command.
     
-    0.3.1
-    Fixed pandas and matplotlib code so that PlotSME can run on rap as well.
+    Improvements in PlotFunctions: 
+        A figure failing to save will now not crash the code.
+        General cleanup and improvements.
     
-    0.3.2
-    Included odd element group
-    
-    0.3.3
-    Formatting cleanup
+    Provisional update feature added: 
+        The new 'update' command checks for new resultfiles and will use that file for plotting.
+        The command won't change the file permanently, maybe in another version?
     
 Top priority:
     Get the name of the element on the plots.
@@ -82,7 +82,8 @@ OPTICAL_DIF = IGRINS_RESULTS.drop(DROP_LIST, axis=1) - OPTICAL_RESULTS.drop(DROP
 
 DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE]
 
-
+Comparison = 'ALL'
+pl.Comp(Comparison)
 
 
 while True:
@@ -92,8 +93,15 @@ while True:
     if element == 'quit':
         print('Plotting stopped')
         break  
+    elif element == 'comp':
+        pl.PickComp()
+        Comparison = pl.Comparison
+        pl.Comp(Comparison)
+        CompleteFlag = pl.CompleteFlag
+        CompCol = pl.CompCol
+        continue
     elif (element in PlotInput) and (diagFlag == False):
-        pl.PlotElement(element, DATA, plotdir)
+        pl.PlotElement(element, DATA, plotdir,CompleteFlag,CompCol=CompCol)
         print('Plotted {}'.format(element))
     elif (element in Diagnostics) or (diagFlag == True):
         print('\n Diagnosing...')
@@ -106,4 +114,14 @@ while True:
             break
         pl.PlotDiagnostics(element, diag, DATA, OPTICAL_DIF, plotdir)
         diagFlag = True
+    elif element == 'update':
+        import glob
+        import os
+
+        ResFiles = glob.glob(resdir + 'result_H_val08*.txt') # * means all if need specific format then *.csv
+        NewRes = max(ResFiles, key=os.path.getctime)
+        print('Latest file:' + NewRes)
+        IGRINS_RESULTS = pd.read_csv(NewRes, skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
+        DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE]
+        continue
     continue
