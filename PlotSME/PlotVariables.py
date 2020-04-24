@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.4
+Version: 0.4.1
 -----------------------------------------
 Text info for the PlotSME code
 """
@@ -61,6 +61,7 @@ APOGEE_Header = ['2MASS','[Fe/H]','Teff','logg','Na','Mg','Si','S','P','K','Ca',
 
 #Element names
 Elements = ['Al','C','Ca','Ce','Co','Cr','Cu','Fe','Ge','HF','K','Mg','Mn','Na','Nd','Ni','P','Rb','S','Sc','Si','Ti','V','Y','Yb']
+FinishedElements = ['Al','Ca','Mg','Na','Ni','S','Si']
 al,c,ca,ce,co,cr,cu,fe,ge,hf,k,mg,mn,na,nd,ni,p,rb,s,sc,si,ti,v,y,yb = Elements
 Al,C,Ca,Ce,Co,Cr,Cu,Fe,Ge,Hf,K,Mg,Mn,Na,Nd,Ni,P,Rb,S,Sc,Si,Ti,V,Y,Yb = Elements
 
@@ -74,6 +75,16 @@ PlotInput = Elements + Groups
 q = 'quit'
 comp = 'comp'
 update = 'update'
+yes = 'Y'
+Yes = 'Y'
+YES = 'Y'
+n = 'N'
+N = 'N'
+no = 'N'
+No = 'N'
+NO = 'N'
+ALL = 'ALL'
+
 
 #Comparison details
 CompLabel = ['Optical', 'Ivalu', 'APOGEE']
@@ -90,15 +101,16 @@ NeutronElements = []
 
 
 #Diagnostics
-Diagnostics = ['diagnostics', 'Teff', 'logg', 'vmic', '[Fe/H]']
+Diagnostics = ['diagnostics', 'Teff', 'logg', '[Fe/H]', 'vmic']
 
 diag, teff, logg, vmic, metal = Diagnostics
 
-DiagLimits = [[4000,5250],[1.15,3.6],[1.1,2.0],[-1.2,0.4]]
+DiagLimits = [[4000,5250],[1.15,3.6],[-1.2,0.4],[1.1,2.0]]
 
-DiagColours = ['crimson', 'teal', 'forestgreen', 'saddlebrown']
+DiagColours = ['crimson', 'teal', 'saddlebrown', 'forestgreen']
 
 diagFlag = False
 
-
+#Preferences
+Naming = True
 
