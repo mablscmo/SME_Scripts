@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-Version: 0.4
+Version: 0.4.1
 -----------------------------------------
 Plan:
     Ok, så planen är att du ger åtminstånde två inputs i början: element och jämförelse. Kanske skippar att ge jämförelse som input.
@@ -29,11 +29,24 @@ New in version 0.4:
         The new 'update' command checks for new resultfiles and will use that file for plotting.
         The command won't change the file permanently, maybe in another version?
     
+    0.4.1
+    Improvements and statistical imformation for diagnosticsplots.
+    Name of element now displayed on the plots, aside from on the y-axis, control via Naming parameter in PlotVariables.
+    Created UpdateAll and DiagnoseAll subroutines:
+        Update all figures with the 'update' command, simply say yes to updating everything. NB: Also updates all groups. 
+        For an element to be updated, add it to the FinishedElements list, or try the 'ALL' command (not advised).
+        
+        Diagnose all is accessed by typing ALL as element when diagnosing. NB: Groups are not diagnosed at the moment.
+        
+    Known problems:
+        Plot formatting on rap is wonky, the legend is way too big. Will look into it.
+        
 Top priority:
-    Get the name of the element on the plots.
-    Create an all plots grop with coloured backgrounds.
-    
-
+    Create an all plots group with coloured backgrounds.
+    Diagnostics:
+        Calculate mean shift and standard deviation
+        Fit line to points
+        Group diagnosing
 """
 
 import numpy as np
@@ -93,6 +106,9 @@ while True:
     if element == 'quit':
         print('Plotting stopped')
         break  
+    elif (element in PlotInput) and (diagFlag == False):
+        pl.PlotElement(element, DATA, plotdir)
+        print('Plotted {}'.format(element))
     elif element == 'comp':
         pl.PickComp()
         Comparison = pl.Comparison
@@ -100,9 +116,6 @@ while True:
         CompleteFlag = pl.CompleteFlag
         CompCol = pl.CompCol
         continue
-    elif (element in PlotInput) and (diagFlag == False):
-        pl.PlotElement(element, DATA, plotdir,CompleteFlag,CompCol=CompCol)
-        print('Plotted {}'.format(element))
     elif (element in Diagnostics) or (diagFlag == True):
         print('\n Diagnosing...')
         if diagFlag == False:
@@ -111,17 +124,36 @@ while True:
         element = pl.element
         if element == 'quit':
             print('Diagnosing stopped')
+            diagFlag = False
             break
-        pl.PlotDiagnostics(element, diag, DATA, OPTICAL_DIF, plotdir)
+        elif element == 'ALL':
+            pl.DiagnoseAll(FinishedElements, diag, DATA, OPTICAL_DIF, plotdir)
+        else:
+            pl.PlotDiagnostics(element, diag, DATA, OPTICAL_DIF, plotdir)
         diagFlag = True
     elif element == 'update':
         import glob
         import os
-
+        
         ResFiles = glob.glob(resdir + 'result_H_val08*.txt') # * means all if need specific format then *.csv
         NewRes = max(ResFiles, key=os.path.getctime)
         print('Latest file:' + NewRes)
         IGRINS_RESULTS = pd.read_csv(NewRes, skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
         DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE]
+        while True:
+            try:
+                ynq = eval(input('Update all plots? [y/n]: '))
+            except NameError:
+                print('Input not recogniced')
+                continue   
+            break
+        if ynq == 'N':
+            continue
+        if ynq == 'ALL':
+            pl.UpdateAll(Elements, DATA, plotdir+'test/')
+            pl.UpdateAll(Groups, DATA, plotdir)            
+        else:
+            pl.UpdateAll(FinishedElements, DATA, plotdir)
+            pl.UpdateAll(Groups, DATA, plotdir)
         continue
     continue
