@@ -2,9 +2,9 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.3.3
+Version: 0.4
 -----------------------------------------
-Functions for the PlotAbundances code
+Functions for the PlotSME code
 """
 
 import numpy as np
@@ -25,130 +25,139 @@ def PickElement():
         break
     if element in PlotInput:
         print('Plotting {ele}...\n'.format(ele=element))
-    
-def PlotInternal(subject,row,rows):
-    if rows == 1:
-        for i in range(3):
-            ax[i].axvline(0,0,1, color='0.75', linestyle='dashed')
-            ax[i].axhline(0,0,1, color='0.75', linestyle='dashed')
-            ax[i].set_xlim([-2,1])
-            ax[i].set_ylim([-1,1])
-            ax[i].set_xlabel('[Fe/H]')
-            ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(subject)].values,'.',color='crimson',label='IGRINS')
-            ax[i].plot(Comparison[i]['[Fe/H]'].values,Comparison[i]['{}'.format(subject)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
-            ax[i].legend(loc='lower left',fancybox=True, numpoints=1)    
+        
+def Comp(Comparison):
+    global CompCol, CompleteFlag
+    if Comparison == 'ALL':
+        print('Plotting comparisons to all datasets')
     else:
-        for i in range(3):
-            ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
-            ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
-            ax[row,i].set_xlim([-2,1])
-            ax[row,i].set_ylim([-1,1])
-            ax[row,i].set_xlabel('[Fe/H]')
-            ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(subject)].values,'.',color='crimson',label='IGRINS')
-            ax[row,i].plot(Comparison[i]['[Fe/H]'].values,Comparison[i]['{}'.format(subject)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
-            ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1)         
+        CSplit = Comparison.split()
+        try:
+            if 'O' not in CSplit:
+                CompCol.remove(0)
+                print("Not comparing to optical data")
+            if 'I' not in CSplit:
+                CompCol.remove(1)
+                print("Not comparing to Ivalu's data")            
+            if 'A' not in CSplit:
+                CompCol.remove(2)
+                print("Not comparing to APOGEE data")
+            if 'C' not in CSplit:
+                CompleteFlag = False
+                print("Not comparing to complete optical data")
+        except ValueError:
+            print('Something went wrong with the comparison, might want to try again')
+    
+def PickComp():
+    global Comparison
+    while True:
+        try:
+            print("Available comparisons:\n Optical 'O'\n Ivalu 'I'\n APOGEE 'A'\n Complete optical 'C'\n All 'ALL'")
+            
+            Comparison = input('Comparisons (whitespace separation): ').upper()
+        except NameError:
+            print('Input not recogniced')
+            continue
+        break
 
-def PlotElement(element, DATA, plotdir):
+
+
+def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompCol):
     IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
     plt.ioff()
+    NCol = len(CompCol)
     if element in Elements:
-        fig, ax = plt.subplots(1, 3, figsize=(21, 5))
-       
-        for i in range(3):
-            ax[i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(element)].values,'.',color='silver',label='Complete optical')
+        fig, ax = plt.subplots(1, NCol, figsize=(7*NCol, 5))
+        for i in range(NCol):
+            if CompleteFlag == True:
+                ax[i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(element)].values,'.',color='silver',label='Complete optical')
             ax[i].axvline(0,0,1, color='0.75', linestyle='dashed')
             ax[i].axhline(0,0,1, color='0.75', linestyle='dashed')
             ax[i].set_xlim([-2,1])
             ax[i].set_ylim([-1,1])
             ax[i].set_xlabel('[Fe/H]')
             ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(element)].values,'.',color='black',label='IGRINS')
-            ax[i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(element)].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+            ax[i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(element)].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
             ax[i].legend(loc='lower left',fancybox=True, numpoints=1) 
         ax[0].set_ylabel('[{}/Fe]'.format(element))
-        plt.tight_layout()
-        plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)   
-        plt.draw()
-        plt.show()
         
     if element == 'Alpha':
-        fig, ax = plt.subplots(len(AlphaElements), 3, figsize=(21, len(AlphaElements)*4))
+        fig, ax = plt.subplots(len(AlphaElements), NCol, figsize=(7*NCol, len(AlphaElements)*4))
         for row in range(len(AlphaElements)):
             
-            for i in range(3):
-                ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(AlphaElements[row])].values,'.',color='silver',label='Complete optical')
+            for i in range(NCol):
+                if CompleteFlag == True:
+                    ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(AlphaElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(AlphaElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(AlphaElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(AlphaElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(AlphaElements[row]))   
-        plt.tight_layout()
-        plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)
-        plt.draw()
-        plt.show()
         
     if element == 'Odd':
-        fig, ax = plt.subplots(len(OddElements), 3, figsize=(21, len(OddElements)*4))
+        fig, ax = plt.subplots(len(OddElements), NCol, figsize=(7*NCol, len(OddElements)*4))
         for row in range(len(OddElements)):
             
-            for i in range(3):
-                ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(OddElements[row])].values,'.',color='silver',label='Complete optical')
+            for i in range(NCol):
+                if CompleteFlag == True:
+                    ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(OddElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(OddElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(OddElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(OddElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(OddElements[row]))   
-        plt.tight_layout()
-        plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)
-        plt.draw()
-        plt.show()
-         
+
     #Need to measure more iron-peak elements before this code works
     if element == 'Iron_peak':
-        fig, ax = plt.subplots(len(IronElements), 3, figsize=(21, len(IronElements)*4))
+        fig, ax = plt.subplots(len(IronElements), NCol, figsize=(7*NCol, len(IronElements)*4))
         for row in range(len(IronElements)):
-            ax[0].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=IronElements[row])].values,'.',color='silver',label='Complete optical')
-            for i in range(3):
+            for i in range(NCol):
+                if CompleteFlag == True:
+                    ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=IronElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(IronElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(IronElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(IronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(IronElements[row]))   
-        plt.tight_layout()
-        plt.savefig(plotdir+element+'.pdf',dpi=500)
-        plt.draw()
-        plt.show()
         
     #Need to measure more neutron-capture elements before this code works
     if element == 'Neutron_capture':
-        fig, ax = plt.subplots(len(NeutronElements), 3, figsize=(21, len(NeutronElements)*4))
+        fig, ax = plt.subplots(len(NeutronElements), NCol, figsize=(7*NCol, len(NeutronElements)*4))
         for row in range(len(NeutronElements)):
-            ax[0].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(NeutronElements[row])].values,'.',color='silver',label='Complete optical')
-            for i in range(3):
+            for i in range(NCol):
+                if CompleteFlag == True:
+                    ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(NeutronElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].axhline(0,0,1, color='0.75', linestyle='dashed')
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(NeutronElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[i+1]['[Fe/H]'].values,DATA[i+1]['{}'.format(NeutronElements[row])].values,'.',color=Colours[i],alpha=0.75,label=CompLabel[i])
+                ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(NeutronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(NeutronElements[row]))   
-        plt.tight_layout()
-        plt.savefig(plotdir+element+'.pdf',dpi=500)
-        plt.draw()
-        plt.show()
+            
+    #Formatting and saving the figure
+    plt.tight_layout()
+    try:
+        plt.savefig(plotdir+'abundances_'+element+'.pdf',dpi=500)
+    except PermissionError:
+            print("File is already opened somewhere, you need to close it before you can save.")
+    plt.draw()
+    plt.show()
+
 
     
 
