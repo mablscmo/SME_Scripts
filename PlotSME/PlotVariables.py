@@ -2,9 +2,9 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.3.3
+Version: 0.4
 -----------------------------------------
-Text info for the PlotAbundances code
+Text info for the PlotSME code
 """
 
 #Header for the pandas directory, should probably have more descriptive names than 2 3 4 5 6 7.. but I'm not sure what they do
@@ -72,11 +72,14 @@ PlotInput = Elements + Groups
 
 #Commands
 q = 'quit'
-
+comp = 'comp'
+update = 'update'
 
 #Comparison details
 CompLabel = ['Optical', 'Ivalu', 'APOGEE']
 Colours = ['royalblue', 'crimson', 'forestgreen']#darkviolet
+CompCol = [0,1,2]
+CompleteFlag = True
 
 
 #Elements within groups
