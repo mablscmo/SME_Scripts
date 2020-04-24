@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.4
+Version: 0.4.1
 -----------------------------------------
 Functions for the PlotSME code
 """
@@ -64,6 +64,7 @@ def PickComp():
 
 def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompCol):
     IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
+    BoxProps = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
     plt.ioff()
     NCol = len(CompCol)
     if element in Elements:
@@ -80,9 +81,12 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
             ax[i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(element)].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
             ax[i].legend(loc='lower left',fancybox=True, numpoints=1) 
         ax[0].set_ylabel('[{}/Fe]'.format(element))
-        
+        if Naming == True:
+            ax[NCol-1].text(0.96,0.95,element,fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[NCol-1].transAxes)
+
     if element == 'Alpha':
         fig, ax = plt.subplots(len(AlphaElements), NCol, figsize=(7*NCol, len(AlphaElements)*4))
+        
         for row in range(len(AlphaElements)):
             
             for i in range(NCol):
@@ -96,8 +100,9 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(AlphaElements[row])].values,'.',color='black',label='IGRINS')
                 ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(AlphaElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{}/Fe]'.format(AlphaElements[row]))   
-        
+            ax[row,0].set_ylabel('[{}/Fe]'.format(AlphaElements[row]))
+            if Naming == True:
+                ax[row,NCol-1].text(0.973,0.95,AlphaElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
     if element == 'Odd':
         fig, ax = plt.subplots(len(OddElements), NCol, figsize=(7*NCol, len(OddElements)*4))
         for row in range(len(OddElements)):
@@ -113,7 +118,9 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(OddElements[row])].values,'.',color='black',label='IGRINS')
                 ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(OddElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{}/Fe]'.format(OddElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(OddElements[row]))
+            if Naming == True:
+                ax[row,NCol-1].text(0.973,0.95,OddElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
 
     #Need to measure more iron-peak elements before this code works
     if element == 'Iron_peak':
@@ -130,7 +137,9 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(IronElements[row])].values,'.',color='black',label='IGRINS')
                 ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(IronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{}/Fe]'.format(IronElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(IronElements[row]))
+            if Naming == True:
+                ax[row,NCol-1].text(0.973,0.95,IronElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
         
     #Need to measure more neutron-capture elements before this code works
     if element == 'Neutron_capture':
@@ -147,7 +156,9 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(NeutronElements[row])].values,'.',color='black',label='IGRINS')
                 ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(NeutronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
-            ax[row,0].set_ylabel('[{}/Fe]'.format(NeutronElements[row]))   
+            ax[row,0].set_ylabel('[{}/Fe]'.format(NeutronElements[row]))
+            if Naming == True:
+                ax[row,NCol-1].text(0.973,0.95,NeutronElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
             
     #Formatting and saving the figure
     plt.tight_layout()
@@ -167,7 +178,13 @@ def PlotDiagnostics(element, diag, DATA, DIF_DATA, plotdir):
     plt.ioff()
     
     if diag == 'diagnostics':
+        mean, std = round(DIF_DATA['{}'.format(element)].mean(),3), round(DIF_DATA['{}'.format(element)].std(),3)
+        StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
+        BoxProps = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+
         fig, ax = plt.subplots(1, 4, figsize=(26, 5))
+        if Naming == True:
+            ax[3].text(0.96,0.95,element,fontsize=25, verticalalignment='top', horizontalalignment='right',bbox=BoxProps, transform=ax[3].transAxes)
         for i in range(4):
             # ax[i].axvline(0,0,1, color='0.75', linestyle='dashed')
             ax[i].axhline(0,0,1, color='0.75', linestyle='dashed')
@@ -175,18 +192,23 @@ def PlotDiagnostics(element, diag, DATA, DIF_DATA, plotdir):
             ax[i].set_ylim([-1,1])
             ax[i].set_xlabel(Diagnostics[i+1])
             ax[i].plot(IGRINS_RESULTS[Diagnostics[i+1]].values,DIF_DATA['{}'.format(element)].values,'.',markersize=10,color=DiagColours[i])
-        ax[0].set_ylabel(r'[{ele}/Fe]$_{{IGRINS}}$-[{ele}/Fe]$_{{OPTICAL}}$'.format(ele=element))
+            ax[i].text(0.05, 0.05, StatInfo, fontsize=14, verticalalignment='bottom', bbox=BoxProps, transform=ax[i].transAxes)
+        ax[0].set_ylabel('IGRINS-OPTICAL')
         plt.tight_layout()
-        plt.savefig(plotdir+diag+'_'+element+'.pdf',dpi=500)   
+        try:
+            plt.savefig(plotdir+diag+'_'+element+'.pdf',dpi=500)   
+        except PermissionError:
+            print("File is already opened somewhere, you need to close it before you can save.")
+
         plt.draw()
         plt.show()
     elif diag == 'Teff':
         i = 0
     elif diag == 'logg':
         i = 1
-    elif diag == 'vmic':
-        i = 2
     elif diag == '[Fe/H]':
+        i = 2
+    elif diag == 'vmic':
         i = 3
     if diag != 'diagnostics':
         plt.figure(figsize=(9,5))
@@ -195,10 +217,27 @@ def PlotDiagnostics(element, diag, DATA, DIF_DATA, plotdir):
         plt.xlim(DiagLimits[i])
         plt.ylim([-1,1])
         plt.xlabel(Diagnostics[i+1])
-        plt.ylabel(r'[{ele}/Fe]$_{{IGRINS}}$-[{ele}/Fe]$_{{OPTICAL}}$'.format(ele=element))
-        plt.plot(IGRINS_RESULTS[Diagnostics[i+1]].values,DIF_DATA['{el}'.format(el=element)].values,'.',markersize=10,color=DiagColours[i])
+        plt.ylabel('IGRINS-OPTICAL')
+        plt.plot(IGRINS_RESULTS[Diagnostics[i+1]].values,DIF_DATA['{}'.format(element)].values,'.',markersize=10,color=DiagColours[i])
         plt.tight_layout()
-        plt.savefig(plotdir+diag+'_'+element+'.pdf',dpi=500)   
+        try:
+            plt.savefig(plotdir+diag+'_'+element+'.pdf',dpi=500)   
+        except PermissionError:
+            print("File is already opened somewhere, you need to close it before you can save.")
         plt.draw()
         plt.show()
 
+def UpdateAll(FinishedElements, DATA, plotdir):
+    for i in FinishedElements:
+        print('Plotting {}...'.format(i))
+        try:
+            PlotElement(i, DATA, plotdir)
+        except KeyError:
+            print('Problem with ' + i)
+        except IndexError:
+            print('No data for ' + i)
+def DiagnoseAll(FinishedElements, diag, DATA, DIF_DATA, plotdir):
+    for i in FinishedElements:
+        print('Diagnosing {}...'.format(i))
+        PlotDiagnostics(i, diag, DATA, DIF_DATA, plotdir)
+ 
