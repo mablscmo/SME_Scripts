@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.4.3
+Version: 0.4.4
 -----------------------------------------
 This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
 It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
@@ -32,7 +32,14 @@ New in version 0.4:
         Continuummask checking output now gives you actually useful information on the mask. Something that actually tells you where 
         the overlap is, not yet implemented or planned. 
         Formatting cleanup.
-
+    
+    0.4.4:
+        Implemented a check to see if the mask files are actually there, will polish later with a proper quit option.
+        You can now alter which linelist you are using on the fly:
+            When prompted [y/n] to choose if you will check the linelist, give 'update' to be promted to change which
+            linelist you are currently working with.
+        If the code can't find your linelist, you are now prompted to change it's name.
+        
 New in version 0.3:
     Creates an output file for the linelist search with the strengths of the lines from the weak line approximation included.
 
@@ -72,20 +79,31 @@ instrument = 'igrinsh'
 Elements = ['al','c','ca','ce','co','cr','cu','fe','ge','hf','k','mg','mn','na','nd','ni','p','rb','s','sc','si','ti','v','y','yb']
 al,c,ca,ce,co,cr,cu,fe,ge,hf,k,mg,mn,na,nd,ni,p,rb,s,sc,si,ti,v,y,yb = Elements
 Al,C,Ca,Ce,Co,Cr,Cu,Fe,Ge,Hf,K,Mg,Mn,Na,Nd,Ni,P,Rb,S,Sc,Si,Ti,V,Y,Yb = Elements
+q = 'quit'
 
 while True:
     try:
-            element = input('Which element are you sanity checking? ')
+            element = eval(input('Which element are you sanity checking? '))
     except NameError:
         print('Element not recogniced, check spelling or edit the code if we got a new element')
         continue
+    if element == q:
+        raise SystemExit('Sanity not checked')
+    try:
+        "Reads in files for checking"
+        lmask = np.loadtxt('{ldir}{ele}_{inst}_lmask.dat'.format(ldir=lmaskdir, ele=element, inst=instrument),comments=';')
+        segment = np.loadtxt('{ldir}{ele}_{inst}_seg.dat'.format(ldir=lmaskdir, ele=element, inst=instrument),comments=';')
+        contmask = np.loadtxt('{cdir}{inst}_automatic_cmask.dat'.format(cdir=cmaskdir, inst=instrument),comments=';')
+    except FileNotFoundError:
+        print("The files for {} were not found, try another element or press 'q' to quit".format(element))
+        continue        
+    except OSError:
+        print("The files for {} were not found, try another element or press 'q' to quit".format(element))
+        continue        
+        
     break
 print('Checking {}...\n'.format(element))
 
-"Reads in files for checking"
-lmask = np.loadtxt('{ldir}{ele}_{inst}_lmask.dat'.format(ldir=lmaskdir, ele=element, inst=instrument),comments=';')
-segment = np.loadtxt('{ldir}{ele}_{inst}_seg.dat'.format(ldir=lmaskdir, ele=element, inst=instrument),comments=';')
-contmask = np.loadtxt('{cdir}{inst}_automatic_cmask.dat'.format(cdir=cmaskdir, inst=instrument),comments=';')
 
 
 
@@ -213,6 +231,8 @@ if (LmaskFlag & SegCheck & InSegFlag & ContFlag ) == True:
 
 
 "____________________________________Linelist check__________________________________"
+update = 'update'
+
 if Computer != 'rap':
     while True:
         try:
@@ -226,10 +246,12 @@ else:
     print('\n')
     print("Can't check the linelist on rap at the moment due to pandas limitations")
 
-
 if ynq in ['n','N','no','No','NO']:
     raise SystemExit('Linelist not checked')
-
+    
+elif ynq == 'update':
+    LineListName = input('Linelist name: ')
+    
 NoLinesFlag = False
 MultLinesFlag = False
 
@@ -250,8 +272,24 @@ def strength(gf, exc, T=5770):
 
 "______________________________Reads in linelist_____________________________________"
 ListHeader = ['EleIon','LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']
-LineList = pd.read_csv(lldir + LineListName + '.dat', index_col=False, names=ListHeader, skiprows= lambda x: logic(x))
 
+while True:
+    try:
+        LineList = pd.read_csv(lldir + LineListName + '.dat', index_col=False, names=ListHeader, skiprows= lambda x: logic(x))
+    except FileNotFoundError:
+        print("The linelist {} was not found, try another or press 'q' to quit".format(LineListName))
+        LineListName = input('Linelist name: ')
+        if LineListName == 'quit':
+            raise SystemExit('Linelist not checked')
+        continue        
+    except OSError:
+        print("The linelist {} was not found, try another or press 'q' to quit".format(LineListName))
+        LineListName = input('Linelist name: ')
+        if LineListName == 'quit':
+            raise SystemExit('Linelist not checked')
+        continue
+    break    
+        
 LineList[['Ele','Ion']] = LineList.EleIon.str.split(expand=True)
 LineList['Ele'] = LineList['Ele'].str.lower() + "'"
 LineList = LineList.drop(columns=['JLow', 'ExcHigh', 'JHigh', 'LandLower', 'LandUpper', 'LandMean', 'RadDamping', 'StarkDamp', 'WaalsDamp', 'CentralDepth'])
@@ -263,6 +301,7 @@ LineList['strength'] = strength(LineList['loggf'],LineList['ExcLow'],5700)
 to a report file. Also alerts and writes down linemasks that do not contain any lines of the correct element.'''
 
 ReportFile = open("{}_report.txt".format(element),"w+")
+
 
 MultLineCount = 0
 NoLineCount = 0
@@ -296,8 +335,18 @@ for i in range(len(lmask)):
         NoLinesFlag = True
         NoLineCount += 1
         ReportFile.write("\n")
+        
+if MultLinesFlag == False:
+    ReportFile.write('No additional lines found within the linemasks\n')
+else:
+    ReportFile.write('{count}/{tot} linemasks with multiple lines\n'.format(count=MultLineCount, tot = len(lmask)))
+    ReportFile.write('{} linemasks contain secondary lines crossing the strength threshold of 1/{}\n'.format(TolCount,Tolerance))
 
-ReportFile.write('{} linemasks contain secondary lines crossing the strength threshold of 1/{}'.format(TolCount,Tolerance))
+if NoLinesFlag == False:
+    ReportFile.write('No linemasks without lines\n')
+else:
+    ReportFile.write('{count}/{tot} linemasks without lines'.format(count=NoLineCount, tot = len(lmask)))
+
 ReportFile.close()
 
 "_____________________________________Final status___________________________________"
@@ -306,7 +355,7 @@ if MultLinesFlag == False:
     print('No additional lines found within the linemasks')
 else:
     print('{count}/{tot} linemasks with multiple lines'.format(count=MultLineCount, tot = len(lmask)))
-    print('{} linemasks contain secondary lines crossing the strength threshold of 1/{}'.format(TolCount,Tolerance))
+    print('{} secondary lines cross the strength threshold of 1/{}'.format(TolCount,Tolerance))
 
 if NoLinesFlag == False:
     print('No linemasks without lines')
