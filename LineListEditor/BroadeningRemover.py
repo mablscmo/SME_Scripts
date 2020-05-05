@@ -27,7 +27,7 @@ def strength(gf, exc, T=5770):
 "_____________________________________________Read in all files_____________________________________________"
 print('Loading files...')
 #Linelist you want to remove van der Waals broadening data you have added
-LineListFile ='LineListCurrent.dat'
+LineListFile ='LineListNewgf_vdW.dat'
 LLdir = '/Users/monte/OneDrive - Lund University/Uni/Master/LineList_Copies/'
 
 #Linelist without the added van der Waals broadening
@@ -50,20 +50,36 @@ BroadeningData = pd.read_csv(Sdir + SourceFile, index_col=False, names=Broadenin
 print('Restoring broadening values to previous state, this will take a while...')
 
 TrackerFile = open("LinesWithBroadening.txt","w+")
+ProblemFile = open("BroadeningProblemLines.txt","w+")
 progress = 0
+
+NewLineCount = 0
+
 for i in range(LineLength):
-    try:
-        OrigBroad = LineList.iloc[i]['WaalsDamp']
-        LineList.loc[LineList.index == i, 'WaalsDamp'] = BroadeningData.loc[(BroadeningData['EleIon'] == LineList['EleIon'][i]) & (BroadeningData['LambdaAir'] == LineList['LambdaAir'].values[i]), 'WaalsDamp'].values[0]
-    except IndexError:
-        print("Can't find line {0} at {1} Å".format(i,format(LineList.loc[LineList.index == i, 'LambdaAir'].values[0],'.3f')))
-    if OrigBroad != LineList.iloc[i]['WaalsDamp']:
-        BroadLine = LineList.iloc[i]
-        TrackerFile.write('{0: <8} {1: <11} Old vdW: {2: <9} New vdW: {3: <9} Source: bsyn   Fit: \n'.format(BroadLine['EleIon'], format(BroadLine['LambdaAir'],'.3f'), format(OrigBroad,'.3f'), format(BroadLine['WaalsDamp'],'.3f')))
+    while True:
+        CurrentLine = LineList.iloc[i]
+        TrialLine = BroadeningData.iloc[i-NewLineCount]
+        if CurrentLine.WaalsDamp != TrialLine.WaalsDamp:
+            if (CurrentLine.EleIon == TrialLine.EleIon) & (CurrentLine.ExcLow == TrialLine.ExcLow):
+                LineList.loc[LineList.index == i, 'WaalsDamp'] = BroadeningData.loc[BroadeningData.index == i-NewLineCount, 'WaalsDamp'].values[0]
+                TrackerFile.write('{0: <8} {1: <11} Old vdW: {2: <9} New vdW: {3: <9} Source: bsyn   Fit: \n'.format(CurrentLine['EleIon'], format(CurrentLine['LambdaAir'],'.3f'), format(TrialLine['WaalsDamp'],'.3f'), format(CurrentLine['WaalsDamp'],'.3f')))
+                break
+            elif (CurrentLine.LambdaAir != TrialLine.LambdaAir):
+                ProblemFile.write(str(CurrentLine.values)+'\n')
+                print("Can't find line {0} at {1} Å {2}".format(i,format(CurrentLine['LambdaAir'],'.3f'),CurrentLine['EleIon']))
+                NewLineCount += 1
+                break
+            else:
+                print("Not sure what's going on for line {0} at {1} Å {2}".format(i,format(LineList.loc[LineList.index == i, 'LambdaAir'].values[0],'.3f'),LineList.loc[LineList.index == i, 'EleIon'].values[0]))
+                ProblemFile.write(str(CurrentLine.values)+'\n')
+        break
     if round(100*(1+i)/LineLength) != progress:
         progress = round(100*(1+i)/LineLength)
         print('{nr}% '.format(nr=progress))
+
+
 TrackerFile.close()
+ProblemFile.close()
 
 '''_______________________________________NEW FILE CREATION LABORATORY_______________________________________'''
 
@@ -81,10 +97,12 @@ if ynq in ['n','N','no','No','NO']:
     raise SystemExit('No new linelist')
 
 
-#Create a new linelist and open the old one for reading
-NewFile = open("NewLineList.dat","w+")
-Other = open("LineList.dat","r")
+NewListName = "NewLineList.dat"
 
+#Create a new linelist and open the old one for reading
+NewFile = open(NewListName,"w+")
+Other = open(Sdir + LineListFile,"r")
+print('Creating {}, this will also take a little while..\n'.format(NewListName))
 
 #Keep track of where in the imported dataframe you are
 count=0
