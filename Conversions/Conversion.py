@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-04-158
 author: Martin Montelius
-Version: 0.2
+Version: 0.2.1
 -----------------------------------------
 
 Conversions between wavenumber in cm**-1 and wavelengths in Å for both vacuum and air.
@@ -25,12 +25,20 @@ New in version 0.2:
     want (as long as it is implemented). Can also take number of decimals as input, default is 3, and the vac to air variables just like the 
     regular functions. Give it q to quit. 
     Also implemented electronvolt to inverse centimeters function.
+
+    0.2.1:
+    Implemented eV/inv cm to vac/air/nr. The conversion() implementation works but is sort of wonky, giving input as a tuple, list or just a comma
+    between two numbers works fine. 
+    
+
 """
 import numpy as np
 
 edlen66 = [8.34213*10**-5,2.406030*10**-2,1.5997*10**-4,130,130]
 ciddor96 = [0, 5.792105*10**-2,1.67917*10**-3,238.0185,57.362]
 
+
+"_____________________________________________Wavelengths and wavenumbers_____________________________________________"
 def nr_to_vac(wnr):
     if isinstance(wnr,(list,tuple)):
         wnr = np.array(wnr)
@@ -87,6 +95,8 @@ def nr_to_wl(wnr,vta_constants=ciddor96):
         return(np.array(wl))
 
 
+
+"_________________________________________________Energies_________________________________________________"
 def inv_to_ev(inv,upper=None):
     if isinstance(inv,(list,tuple,float,int)):
         inv = np.array(inv)        
@@ -103,10 +113,84 @@ def ev_to_inv(ev,upper=None):
        ev = np.stack((ev,upper))
     return(ev*8065.544)
 
+def ev_to_erg(ev,upper=None):
+    if isinstance(ev,(list,tuple,float,int)):
+        ev = np.array(ev)        
+    if upper != None:
+       upper = np.array(upper)
+       ev = np.stack((ev,upper))
+    return(ev*1.60217733e-12)
+
+def erg_to_ev(erg,upper=None):
+    if isinstance(ev,(list,tuple,float,int)):
+        erg = np.array(erg)        
+    if upper != None:
+       upper = np.array(upper)
+       erg = np.stack((erg,upper))
+    return(erg/1.60217733e-12)
+
+def inv_to_erg(inv,upper=None):
+    if isinstance(ev,(list,tuple,float,int)):
+        inv = np.array(inv)        
+    if upper != None:
+       upper = np.array(upper)
+       inv = np.stack((inv,upper))
+    return(inv_to_ev(ev_to_erg(inv)))
+
+def erg_to_inv(erg,upper=None):
+    if isinstance(ev,(list,tuple,float,int)):
+        erg = np.array(erg)        
+    if upper != None:
+       upper = np.array(upper)
+       erg = np.stack((erg,upper))
+    return(erg_to_ev(ev_to_inv(erg)))
+
+
+"________________________________________________Energy to wl_______________________________________________"
+c = 2.99792458e8    # ms-1 Speed of light
+h = 4.135667696e-15  #eVs Planck constant 
+
+def ev_to_vac(lower,upper,c=c,h=h):
+    if isinstance(lower,(list,tuple)) or isinstance(upper,(list,tuple)):
+        lower = np.array(lower)
+        upper = np.array(upper)
+    return(h*c*10**10/(upper-lower))
+
+def ev_to_air(lower,upper,c=c,h=h):
+    if isinstance(lower,(list,tuple)) or isinstance(upper,(list,tuple)):
+        lower = np.array(lower)
+        upper = np.array(upper)
+    return(vac_to_air(h*c*10**10/(upper-lower)))
+
+def ev_to_nr(lower,upper,c=c,h=h):
+    if isinstance(lower,(list,tuple)) or isinstance(upper,(list,tuple)):
+        lower = np.array(lower)
+        upper = np.array(upper)
+    return(vac_to_nr(h*c*10**10/(upper-lower)))
+
+def inv_to_vac(lower,upper,c=c,h=h):
+    if isinstance(lower,(list,tuple)) or isinstance(upper,(list,tuple)):
+        lower = np.array(lower)
+        upper = np.array(upper)
+    return(h*c*10**10/(inv_to_ev(upper)-inv_to_ev(lower)))
+
+def inv_to_air(lower,upper,c=c,h=h):
+    if isinstance(lower,(list,tuple)) or isinstance(upper,(list,tuple)):
+        lower = np.array(lower)
+        upper = np.array(upper)
+    return(vac_to_air(h*c*10**10/(inv_to_ev(upper)-inv_to_ev(lower))))
+
+def inv_to_nr(lower,upper,c=c,h=h):
+    if isinstance(lower,(list,tuple)) or isinstance(upper,(list,tuple)):
+        lower = np.array(lower)
+        upper = np.array(upper)
+    return(vac_to_nr(h*c*10**10/(inv_to_ev(upper)-inv_to_ev(lower))))
+
+
 
 "____________________________________________CONVERSION FUNCTION____________________________________________"
-air, vac, nr, wl, inv, ev, q = 'air', 'vac', 'nr', 'wl', 'inv', 'ev', 'quit'
-Air, Vac, Nr, Wl, Inv, eV, Q = 'air', 'vac', 'nr', 'wl', 'inv', 'ev', 'quit'
+air, vac, nr, wl, inv, ev, erg, q = 'air', 'vac', 'nr', 'wl', 'inv', 'ev', 'erg', 'quit'
+Air, Vac, Nr, Wl, Inv, eV, Erg, Q = 'air', 'vac', 'nr', 'wl', 'inv', 'ev', 'erg', 'quit'
 
 def conversion(From, To, dec=3, vta_constants=ciddor96):
     if (From == 'air') & (To == 'vac'):
@@ -136,10 +220,47 @@ def conversion(From, To, dec=3, vta_constants=ciddor96):
     elif (From == 'air') & (To == 'nr'):
         def converter(number):
             return(print(round(float(air_to_nr(number)),dec)))
+    elif (From == 'ev') & (To == 'erg'):
+        def converter(number):
+            return(print(round(float(ev_to_erg(number)),dec)))
+    elif (From == 'erg') & (To == 'ev'):
+        def converter(number):
+            return(print(round(float(erg_to_ev(number)),dec)))
+    elif (From == 'inv') & (To == 'erg'):
+        def converter(number):
+            return(print(round(float(inv_to_erg(number)),dec)))
+    elif (From == 'erg') & (To == 'inv'):
+        def converter(number):
+            return(print(round(float(erg_to_inv(number)),dec)))
+    elif (From == 'ev') & (To == 'vac'):
+        print('Give input as: lower,upper')
+        def converter(number):
+            return(print(round(float(ev_to_vac(number[0],number[1])),dec)))        
+    elif (From == 'ev') & (To == 'air'):
+        print('Give input as: lower,upper')
+        def converter(number):
+            return(print(round(float(ev_to_air(number[0],number[1])),dec)))
+    elif (From == 'ev') & (To == 'nr'):
+        print('Give input as: lower,upper')
+        def converter(number):
+            return(print(round(float(ev_to_nr(number[0],number[1])),dec)))
+    elif (From == 'inv') & (To == 'vac'):
+        print('Give input as: upper,lower')
+        def converter(number):
+            return(print(round(float(inv_to_vac(number[0],number[1])),dec)))        
+    elif (From == 'inv') & (To == 'air'):
+        print('Give input as: upper,lower')
+        def converter(number):
+            return(print(round(float(inv_to_air(number[0],number[1])),dec)))
+    elif (From == 'inv') & (To == 'nr'):
+        print('Give input as: upper,lower')
+        def converter(number):
+            return(print(round(float(inv_to_nr(number[0],number[1])),dec)))
     else:
         print('Conversion from {} to {} not yet implemented'.format(From,To))
         raise SystemExit('Please try again')
     global number
+    print("Input 'q' to quit")
     while True:
         try:
             number = eval(input('{} to {}: '.format(From,To)))
