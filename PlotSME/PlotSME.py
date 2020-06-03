@@ -18,12 +18,11 @@ New in version 0.5:
     Fix for all comparisons:
         Comparison plots will now display the correct amount of IGRINS stars. This depends on 2MASS names, meaning that if there are more than one spectra 
         from the same star, it should turn up multiple times.
-        Something in this code is causing the iron-peak group abundance plot to crash, still working on a fix.
     Statistical information, mean and standard deviation compared to optical results, has implemented for abundance plots as well:
         The code is a bit janky, see it as a preliminary version, or rather as a "I don't know how to do this in a sensible way,
         and I will probably never fix it" version.
         For when there are multiple spectra for the same star, I have randomly selected one spectra, this is what's causing most of the trouble.
-        This should work for the element group plots as well.
+        This works for the element group plots as well.
         
 Top priority:
     Create an all plots group with coloured backgrounds.
