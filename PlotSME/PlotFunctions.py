@@ -2,7 +2,9 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.4.1
+Version: 0.5
+
+Updated: tried implementing a list function for the comparison input, not trialled yet
 -----------------------------------------
 Functions for the PlotSME code
 """
@@ -31,7 +33,10 @@ def Comp(Comparison):
     if Comparison == 'ALL':
         print('Plotting comparisons to all datasets')
     else:
-        CSplit = Comparison.split()
+        try:
+            CSplit = Comparison.split()
+        except ValueError:
+            CSplit = list(Comparison)
         try:
             if 'O' not in CSplit:
                 CompCol.remove(0)
@@ -65,11 +70,30 @@ def PickComp():
 def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompCol):
     IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
     BoxProps = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    StatFlag = False
     plt.ioff()
     NCol = len(CompCol)
     if element in Elements:
         fig, ax = plt.subplots(1, NCol, figsize=(7*NCol, 5))
         for i in range(NCol):
+            if DATA[CompCol[i]+1].name == 'Optical':
+                DIF_DATA = IGRINS_RESULTS.sort_values(by='2MASS')['{}'.format(element)].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(element)].values
+                StatFlag = True
+            elif DATA[CompCol[i]+1].name == 'Ivalu':
+                OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(IVALU_RESULTS['2MASS'].values)]
+                if len(OPTICAL_RESULTS) != len(IVALU_RESULTS):
+                    OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])
+                DIF_DATA = IVALU_RESULTS.sort_values(by='2MASS')['{}'.format(element)].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(element)].values
+                StatFlag = True
+            elif DATA[CompCol[i]+1].name == 'Apogee':
+                OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(APOGEE_RESULTS['2MASS'].values)]
+                if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                    APOGEE_RESULTS = APOGEE_RESULTS.drop([2,4])
+                    if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                        OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])                
+                DIF_DATA = APOGEE_RESULTS.sort_values(by='2MASS')['{}'.format(element)].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(element)].values
+                StatFlag = True
+
             if CompleteFlag == True:
                 ax[i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(element)].values,'.',color='silver',label='Complete optical')
             ax[i].axvline(0,0,1, color='0.75', linestyle='dashed')
@@ -77,9 +101,13 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
             ax[i].set_xlim([-2,1])
             ax[i].set_ylim([-1,1])
             ax[i].set_xlabel('[Fe/H]')
-            ax[i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(element)].values,'.',color='black',label='IGRINS')
+            ax[i].plot(IGRINS_RESULTS[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])]['[Fe/H]'].values,IGRINS_RESULTS[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])]['{}'.format(element)].values,'.',color='black',label='IGRINS')
             ax[i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(element)].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
-            ax[i].legend(loc='lower left',fancybox=True, numpoints=1) 
+            if StatFlag == True:
+                mean, std = round(DIF_DATA.mean(),3), round(DIF_DATA.std(),3)
+                StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
+                ax[i].text(0.95, 0.05, StatInfo, fontsize=14, verticalalignment='bottom', horizontalalignment='right', bbox=BoxProps, transform=ax[i].transAxes)
+            ax[i].legend(loc='lower left',fancybox=True, numpoints=1, framealpha=0.5) 
         ax[0].set_ylabel('[{}/Fe]'.format(element))
         if Naming == True:
             ax[NCol-1].text(0.96,0.95,element,fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[NCol-1].transAxes)
@@ -90,6 +118,25 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
         for row in range(len(AlphaElements)):
             
             for i in range(NCol):
+                IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
+                if DATA[CompCol[i]+1].name == 'Optical':
+                    DIF_DATA = IGRINS_RESULTS.sort_values(by='2MASS')['{}'.format(AlphaElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(AlphaElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Ivalu':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(IVALU_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(IVALU_RESULTS):
+                        OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])
+                    DIF_DATA = IVALU_RESULTS.sort_values(by='2MASS')['{}'.format(AlphaElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(AlphaElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Apogee':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(APOGEE_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                        APOGEE_RESULTS = APOGEE_RESULTS.drop([2,4])
+                        if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                            OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])                
+                    DIF_DATA = APOGEE_RESULTS.sort_values(by='2MASS')['{}'.format(AlphaElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(AlphaElements[row])].values
+                    StatFlag = True
+                    
                 if CompleteFlag == True:
                     ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(AlphaElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
@@ -97,8 +144,13 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
-                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(AlphaElements[row])].values,'.',color='black',label='IGRINS')
+                ax[row,i].plot(IGRINS_RESULTS[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])]['[Fe/H]'].values,IGRINS_RESULTS[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])]['{}'.format(AlphaElements[row])].values,'.',color='black',label='IGRINS')
                 ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(AlphaElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
+                if StatFlag == True:
+                    mean, std = round(DIF_DATA.mean(),3), round(DIF_DATA.std(),3)
+                    StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
+                    ax[row,i].text(0.95, 0.05, StatInfo, fontsize=14, verticalalignment='bottom', horizontalalignment='right', bbox=BoxProps, transform=ax[row,i].transAxes)
+                
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(AlphaElements[row]))
             if Naming == True:
@@ -108,6 +160,25 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
         for row in range(len(OddElements)):
             
             for i in range(NCol):
+                IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
+                if DATA[CompCol[i]+1].name == 'Optical':
+                    DIF_DATA = IGRINS_RESULTS.sort_values(by='2MASS')['{}'.format(OddElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(OddElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Ivalu':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(IVALU_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(IVALU_RESULTS):
+                        OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])
+                    DIF_DATA = IVALU_RESULTS.sort_values(by='2MASS')['{}'.format(OddElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(OddElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Apogee':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(APOGEE_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                        APOGEE_RESULTS = APOGEE_RESULTS.drop([2,4])
+                        if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                            OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])                
+                    DIF_DATA = APOGEE_RESULTS.sort_values(by='2MASS')['{}'.format(OddElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(OddElements[row])].values
+                    StatFlag = True
+                    
                 if CompleteFlag == True:
                     ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(OddElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
@@ -115,18 +186,42 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].set_xlim([-2,1])
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
-                ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(OddElements[row])].values,'.',color='black',label='IGRINS')
+                ax[row,i].plot(IGRINS_RESULTS[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])]['[Fe/H]'].values,IGRINS_RESULTS[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])]['{}'.format(OddElements[row])].values,'.',color='black',label='IGRINS')
                 ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(OddElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
+                if StatFlag == True:
+                    mean, std = round(DIF_DATA.mean(),3), round(DIF_DATA.std(),3)
+                    StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
+                    ax[row,i].text(0.95, 0.05, StatInfo, fontsize=14, verticalalignment='bottom', horizontalalignment='right', bbox=BoxProps, transform=ax[row,i].transAxes)
+                                
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(OddElements[row]))
             if Naming == True:
-                ax[row,NCol-1].text(0.973,0.95,OddElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
+                ax[row,NCol-1].text(0.973,0.95,OddElements[row], fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
 
     #Need to measure more iron-peak elements before this code works
     if element == 'Iron_peak':
         fig, ax = plt.subplots(len(IronElements), NCol, figsize=(7*NCol, len(IronElements)*4))
         for row in range(len(IronElements)):
             for i in range(NCol):
+                IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
+                if DATA[CompCol[i]+1].name == 'Optical':
+                    DIF_DATA = IGRINS_RESULTS.sort_values(by='2MASS')['{}'.format(IronElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(IronElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Ivalu':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(IVALU_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(IVALU_RESULTS):
+                        OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])
+                    DIF_DATA = IVALU_RESULTS.sort_values(by='2MASS')['{}'.format(IronElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(IronElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Apogee':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(APOGEE_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                        APOGEE_RESULTS = APOGEE_RESULTS.drop([2,4])
+                        if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                            OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])                
+                    DIF_DATA = APOGEE_RESULTS.sort_values(by='2MASS')['{}'.format(IronElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(IronElements[row])].values
+                    StatFlag = True                
+                
                 if CompleteFlag == True:
                     ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{el}'.format(el=IronElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
@@ -135,17 +230,41 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(IronElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(IronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
+                ax[row,i].plot(DATA[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])][CompCol[i]+1]['[Fe/H]'].values,DATA[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])][CompCol[i]+1]['{}'.format(IronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
+                if StatFlag == True:
+                    mean, std = round(DIF_DATA.mean(),3), round(DIF_DATA.std(),3)
+                    StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
+                    ax[row,i].text(0.95, 0.05, StatInfo, fontsize=14, verticalalignment='bottom', horizontalalignment='right', bbox=BoxProps, transform=ax[row,i].transAxes)
+                                
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(IronElements[row]))
             if Naming == True:
-                ax[row,NCol-1].text(0.973,0.95,IronElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
+                ax[row,NCol-1].text(0.973,0.95,IronElements[row], fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
         
     #Need to measure more neutron-capture elements before this code works
     if element == 'Neutron_capture':
         fig, ax = plt.subplots(len(NeutronElements), NCol, figsize=(7*NCol, len(NeutronElements)*4))
         for row in range(len(NeutronElements)):
             for i in range(NCol):
+                IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE = DATA
+                if DATA[CompCol[i]+1].name == 'Optical':
+                    DIF_DATA = IGRINS_RESULTS.sort_values(by='2MASS')['{}'.format(NeutronElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(NeutronElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Ivalu':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(IVALU_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(IVALU_RESULTS):
+                        OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])
+                    DIF_DATA = IVALU_RESULTS.sort_values(by='2MASS')['{}'.format(NeutronElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(NeutronElements[row])].values
+                    StatFlag = True
+                elif DATA[CompCol[i]+1].name == 'Apogee':
+                    OPTICAL_RESULTS = OPTICAL_RESULTS[OPTICAL_RESULTS['2MASS'].isin(APOGEE_RESULTS['2MASS'].values)]
+                    if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                        APOGEE_RESULTS = APOGEE_RESULTS.drop([2,4])
+                        if len(OPTICAL_RESULTS) != len(APOGEE_RESULTS):
+                            OPTICAL_RESULTS = OPTICAL_RESULTS.drop([3])                
+                    DIF_DATA = APOGEE_RESULTS.sort_values(by='2MASS')['{}'.format(NeutronElements[row])].values - OPTICAL_RESULTS.sort_values(by='2MASS')['{}'.format(NeutronElements[row])].values
+                    StatFlag = True                
+                
                 if CompleteFlag == True:
                     ax[row,i].plot(OPTICAL_COMPLETE['[Fe/H]'].values,OPTICAL_COMPLETE['{}'.format(NeutronElements[row])].values,'.',color='silver',label='Complete optical')
                 ax[row,i,].axvline(0,0,1, color='0.75', linestyle='dashed')
@@ -154,11 +273,16 @@ def PlotElement(element, DATA, plotdir, CompleteFlag=CompleteFlag, CompCol=CompC
                 ax[row,i].set_ylim([-1,1])
                 ax[row,i].set_xlabel('[Fe/H]')
                 ax[row,i].plot(IGRINS_RESULTS['[Fe/H]'].values,IGRINS_RESULTS['{}'.format(NeutronElements[row])].values,'.',color='black',label='IGRINS')
-                ax[row,i].plot(DATA[CompCol[i]+1]['[Fe/H]'].values,DATA[CompCol[i]+1]['{}'.format(NeutronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
+                ax[row,i].plot(DATA[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])][CompCol[i]+1]['[Fe/H]'].values,DATA[IGRINS_RESULTS['2MASS'].isin(DATA[CompCol[i]+1]['2MASS'])][CompCol[i]+1]['{}'.format(NeutronElements[row])].values,'.',color=Colours[CompCol[i]],alpha=0.75,label=CompLabel[CompCol[i]])
+                if StatFlag == True:
+                    mean, std = round(DIF_DATA.mean(),3), round(DIF_DATA.std(),3)
+                    StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
+                    ax[row,i].text(0.95, 0.05, StatInfo, fontsize=14, verticalalignment='bottom', horizontalalignment='right', bbox=BoxProps, transform=ax[row,i].transAxes)
+                                
                 ax[row,i].legend(loc='lower left',fancybox=True, numpoints=1) 
             ax[row,0].set_ylabel('[{}/Fe]'.format(NeutronElements[row]))
             if Naming == True:
-                ax[row,NCol-1].text(0.973,0.95,NeutronElements[row],fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
+                ax[row,NCol-1].text(0.973,0.95,NeutronElements[row], fontsize=25, verticalalignment='top', horizontalalignment='right', bbox=BoxProps, transform=ax[row,NCol-1].transAxes)
             
     #Formatting and saving the figure
     plt.tight_layout()
@@ -181,10 +305,10 @@ def PlotDiagnostics(element, diag, DATA, DIF_DATA, plotdir):
         mean, std = round(DIF_DATA['{}'.format(element)].mean(),3), round(DIF_DATA['{}'.format(element)].std(),3)
         StatInfo = r'$\mu$={}  $\sigma$={}'.format(mean,std)
         BoxProps = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-
+        
         fig, ax = plt.subplots(1, 4, figsize=(26, 5))
         if Naming == True:
-            ax[3].text(0.96,0.95,element,fontsize=25, verticalalignment='top', horizontalalignment='right',bbox=BoxProps, transform=ax[3].transAxes)
+            ax[3].text(0.96,0.95,element, fontsize=25, verticalalignment='top', horizontalalignment='right',bbox=BoxProps, transform=ax[3].transAxes)
         for i in range(4):
             # ax[i].axvline(0,0,1, color='0.75', linestyle='dashed')
             ax[i].axhline(0,0,1, color='0.75', linestyle='dashed')
