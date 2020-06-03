@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-13
 author: Martin Montelius
-Version: 0.4.1
+Version: 0.5
 -----------------------------------------
 Plan:
     Ok, så planen är att du ger åtminstånde två inputs i början: element och jämförelse. Kanske skippar att ge jämförelse som input.
@@ -12,41 +12,26 @@ Plan:
     Jämförelse parametern säger vad det ska plottas mot, kolumnerna ifall det är en grupplot. Jag tänker "optical", "Ivalu", "APOGEE", "all", "none",
     men också en specialare, "other", som promptar att du ger ett annat element som du plottar mot. Kanske kan implementera som ett "compare" kommando.
 
-    Man kanske kan skriva nån kod som hittar rätt resultatfil, eller resultat filer för specifika linjer. Skriv det som ett update kommando,  
+    Man kanske kan skriva nån kod som hittar rätt resultatfil, eller resultat filer för specifika linjer. Skriv det som ett update kommando. 
     
-New in version 0.4:
-    A tentative implementation of choosing what to compare to is implemented:
-        Give 'comp' as a command to see options and choose which datasets should be compared to. 
-        So far the code only works when at least 2 different comparisons are made. 
-        You can change the comparison from the Comparison parameter to not have to do it every time.
-        You can only change comparison once via the comp command.
-    
-    Improvements in PlotFunctions: 
-        A figure failing to save will now not crash the code.
-        General cleanup and improvements.
-    
-    Provisional update feature added: 
-        The new 'update' command checks for new resultfiles and will use that file for plotting.
-        The command won't change the file permanently, maybe in another version?
-    
-    0.4.1
-    Improvements and statistical imformation for diagnosticsplots.
-    Name of element now displayed on the plots, aside from on the y-axis, control via Naming parameter in PlotVariables.
-    Created UpdateAll and DiagnoseAll subroutines:
-        Update all figures with the 'update' command, simply say yes to updating everything. NB: Also updates all groups. 
-        For an element to be updated, add it to the FinishedElements list, or try the 'ALL' command (not advised).
-        
-        Diagnose all is accessed by typing ALL as element when diagnosing. NB: Groups are not diagnosed at the moment.
-        
-    Known problems:
-        Plot formatting on rap is wonky, the legend is way too big. Will look into it.
+New in version 0.5:
+    Fix for all comparisons:
+        Comparison plots will now display the correct amount of IGRINS stars. This depends on 2MASS names, meaning that if there are more than one spectra 
+        from the same star, it should turn up multiple times.
+        Something in this code is causing the iron-peak group abundance plot to crash, still working on a fix.
+    Statistical information, mean and standard deviation compared to optical results, has implemented for abundance plots as well:
+        The code is a bit janky, see it as a preliminary version, or rather as a "I don't know how to do this in a sensible way,
+        and I will probably never fix it" version.
+        For when there are multiple spectra for the same star, I have randomly selected one spectra, this is what's causing most of the trouble.
+        This should work for the element group plots as well.
         
 Top priority:
     Create an all plots group with coloured backgrounds.
+    Create a 'single' comparison command to plot only one set of results
     Diagnostics:
-        Calculate mean shift and standard deviation
         Fit line to points
         Group diagnosing
+
 """
 
 import numpy as np
@@ -55,6 +40,9 @@ import pandas as pd
 import socket
 from PlotVariables import *
 import PlotFunctions as pl
+
+#Settings
+AutoUpdate = False
 
 ###These are just the plotting parameters, so they become in this document
 plt.rcParams['font.size']= 16
@@ -83,9 +71,17 @@ else:
 
 
 #Read in results files
-IGRINS_RESULTS = pd.read_csv(resdir+'result_H_val08_na_20200324_232448.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
-OPTICAL_RESULTS = pd.read_csv(resdir+'result_optical_start_H_si_update.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
-OPTICAL_COMPLETE = pd.read_csv(resdir+'results_val08_all-correct.txt', skiprows=[0,1,2,6], delim_whitespace=True, names=SME_Header)
+if AutoUpdate == True:
+    import glob
+    import os
+    ResFiles = glob.glob(resdir + 'result_H_val08*.txt') # * means all if need specific format then *.csv
+    NewRes = max(ResFiles, key=os.path.getctime)
+    print('Latest file:' + NewRes)
+    IGRINS_RESULTS = pd.read_csv(NewRes, skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
+else:
+    IGRINS_RESULTS = pd.read_csv(resdir+'result_H_val08_k_20200527_161740.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
+OPTICAL_RESULTS = pd.read_csv(resdir+'result_optical_start_H_si_update.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
+OPTICAL_COMPLETE = pd.read_csv(resdir+'results_val08_all-correct.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
 IVALU_DATA = pd.read_csv(homedir+'IVALU_Results.txt', skiprows=[0,1,2], delim_whitespace=True, names=SME_Header)
 IVALU_RESULTS = IVALU_DATA[IVALU_DATA['2MASS'].isin(IGRINS_RESULTS['2MASS'].values)]
 APOGEE_RESULTS = pd.read_csv(homedir+'APOGEE_DATA.txt',names=APOGEE_Header,delim_whitespace=True)
@@ -93,10 +89,18 @@ APOGEE_RESULTS = pd.read_csv(homedir+'APOGEE_DATA.txt',names=APOGEE_Header,delim
 
 OPTICAL_DIF = IGRINS_RESULTS.drop(DROP_LIST, axis=1) - OPTICAL_RESULTS.drop(DROP_LIST, axis=1)
 
+
 DATA = [IGRINS_RESULTS, OPTICAL_RESULTS, IVALU_RESULTS, APOGEE_RESULTS, OPTICAL_COMPLETE]
 
 Comparison = 'ALL'
 pl.Comp(Comparison)
+
+
+OPTICAL_RESULTS.name = 'Optical'
+OPTICAL_COMPLETE.name = 'OComplete'
+IVALU_RESULTS.name = 'Ivalu'
+IGRINS_RESULTS.name = 'Igrins'
+APOGEE_RESULTS.name = 'Apogee'
 
 
 while True:
@@ -151,7 +155,7 @@ while True:
             continue
         if ynq == 'ALL':
             pl.UpdateAll(Elements, DATA, plotdir+'test/')
-            pl.UpdateAll(Groups, DATA, plotdir)            
+            pl.UpdateAll(Groups, DATA, plotdir+'test/')
         else:
             pl.UpdateAll(FinishedElements, DATA, plotdir)
             pl.UpdateAll(Groups, DATA, plotdir)
