@@ -2,7 +2,7 @@
 -----------------------------------------
 Created on 2020-03-22
 author: Martin Montelius
-Version: 0.4.1
+Version: 0.5
 -----------------------------------------
 Text info for the PlotSME code
 """
@@ -73,6 +73,7 @@ PlotInput = Elements + Groups
 
 #Commands
 q = 'quit'
+Q = 'quit'
 comp = 'comp'
 update = 'update'
 yes = 'Y'
@@ -94,8 +95,8 @@ CompleteFlag = True
 
 
 #Elements within groups
-AlphaElements = ['Si','Mg','S','Ca']
-OddElements = ['Al', 'Na']
+AlphaElements = ['Mg','Si','S','Ca']
+OddElements = ['Al', 'Na', 'K']
 IronElements = ['Ni','Cr']
 NeutronElements = []
 
