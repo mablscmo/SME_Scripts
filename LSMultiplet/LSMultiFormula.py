@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Dec 19 20:57:38 2020
-
-@author: monte
+-----------------------------------------
+Created on 2020-12-19
+author: Martin Montelius
+Version: 0.1.1
+-----------------------------------------
+New in 0.1.1:
+    Compatability update with LineListReader 0.1.1s
+    Added the ability to run with command line arguments
 """
 
 import numpy as np
@@ -78,7 +83,7 @@ def Dline2(S,L,J,S2,L2,J2):
 
 def Fline2(J,I,F,J2,F2):
     '''Calculates the relative strength of a hyperfine transition, formula taken
-    from  2012A&A...545A..31H
+    from 2012A&A...545A..31H
     Note only five terms in contrast to Dline2's six, this is because there is 
     no "I2" to check.'''
     
@@ -169,7 +174,7 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
         #Identified as hfs, multiple lines with same J values
         print('Attempting hfs analysis\n')
         #VALD formatting removal
-        element = primary.EleIon.strip("'").split()[0]
+        element = primary.EleIon.split()[0]
         #Looks up the nuclear spin of the most common isotope
         I = getI(element)[0]
         #F values for lower and upper level
@@ -247,6 +252,7 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
 if __name__ == "__main__":
     #Change to match linelist names and directories, socket part and if statement 
     #only necessary if the code will be run on multiple systems
+    import sys
     import socket
     Computer = socket.gethostname()
     if  (Computer == 'ValorToMe') | (Computer == 'SQWAAK2'):
@@ -264,22 +270,31 @@ if __name__ == "__main__":
     ll = LL_reader(LL_name,LL_dir)
 
     while True:
-        #Manual input of lines, needs to be reset after saving the linelist
-        s_line = input('Wavelength: ')
-        if s_line == 'q':
-            print('\nClosing LSMultiplet..\n')
-            break
+        #Checks if arguments have been passed from the command line
+        if len(sys.argv) > 1:
+            import argparse
+            parser = argparse.ArgumentParser(description='''Python code to assist in measuring astrophysical log(gf) values of merged fine or hyperfine structure lines. For lines that are too close to measure individually, this code lets you measure the whole line and calculate what the log(gf) values of the components should be.\nRunning the code from the command line lets you give wavelength and astrophysically measured log(gf) value for the strongest component line as either arguments or input once the code is running.''')
+            parser.add_argument("s_line", type=float, help="wavelength of primary line in Ångström")
+            parser.add_argument("gf_astr", type=float, help="log(gf) of primary line")
+            args = parser.parse_args()
+            s_line, gf_astr = args.s_line, args.gf_astr
         else:
+        #Manual input of lines, needs to be reset after saving the linelist
+            s_line = input('Wavelength: ')
+            if s_line == 'q':
+                print('\nClosing LSMultiplet..\n')
+                break
+            else:
+                try:
+                    s_line = float(s_line)
+                except ValueError:
+                    print('\n ERROR: input not recogniced as a number, try again\n')
+                    continue
             try:
-                s_line = float(s_line)
+                gf_astr = float(input('Astrophysical log(gf): '))
             except ValueError:
                 print('\n ERROR: input not recogniced as a number, try again\n')
                 continue
-        try:
-            gf_astr = float(input('Astrophysical log(gf): '))
-        except ValueError:
-            print('\n ERROR: input not recogniced as a number, try again\n')
-            continue
             
         LSMult = multiplet(wl = s_line, gf = gf_astr, linelist = ll)
         if LSMult is None:
@@ -289,4 +304,5 @@ if __name__ == "__main__":
         for i in range(len(LSMult)):
             sec_line = LSMult.iloc[i]
             print('{0: <15}{1:<10}-->{2:>9}\n'.format(format(sec_line.LambdaAir,'.4f'),format(sec_line.loggf,'.3f'),format(sec_line.new_gf,'.3f')))
-    
+        if len(sys.argv) > 1:
+            break
