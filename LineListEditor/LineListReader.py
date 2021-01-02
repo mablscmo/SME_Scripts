@@ -1,17 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Oct 14 22:18:23 2020
-
-@author: Martin Montelius
+-----------------------------------------
+Created on 2020-10-14
+author: Martin Montelius
+Version: 0.1.1
+-----------------------------------------
 
 Skulle kunna skriva column mergers som en list comprahension, ge inte names till read csv, ha bara nummer
 
 NOTE: Reading in the inelist currently assumes that the references have been removed from the end of the linelist, since they have been in my list. Change the [-21] in the pd.read_csv lines to match your linelist.
+
+New in 0.1.1:
+    Added optional filtering by element and ionisation stage
+    Removed the "'" markers around element and ionisation stage
+
+To do:
+    Ponder if I want EleIon or Ele Ion, truly a question for the ages
+    Improve how LS terms are read in, need to change from using ListHeader to 
+    something that means something
 """
 
 import pandas as pd
 
-def LL_reader(LL_name, LL_dir,write=True):   
+def LL_reader(LL_name, LL_dir,write=True,element=False,ion=False):   
     '''Reads in VALD3 "extract stellar" linelists. To read other formats, such
     as "extract element" the column names need to be changed, alo how the LS
     terms are extracted, as the formatting is inconsistent between different 
@@ -90,4 +101,11 @@ def LL_reader(LL_name, LL_dir,write=True):
     
     #Convert columns with numbers to numbers
     ll[['LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']] = ll[['LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']].astype(float)
+    #Removes unnecessary extra "'"
+    ll['EleIon'] = ll.EleIon.apply(lambda x: x.strip("'"))
+    if element != False:
+        ll = ll.loc[ll.EleIon.apply(lambda x: x.split()[0]) == element.capitalize()]
+    if ion != False:
+        ll = ll.loc[ll.EleIon.apply(lambda x: x.split()[1]) == str(ion)]
+            
     return(ll)
