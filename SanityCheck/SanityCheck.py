@@ -2,16 +2,23 @@
 -----------------------------------------
 Created on 2020-03-12
 author: Martin Montelius
-Version: 0.4.4
+Version: 0.5
 -----------------------------------------
-This script is meant to help you when SME is giving you an error and you don't have the time to look through everything. 
-It will look for any and all things that I guess causes errors in the linemask, segments, continuummask, and LineLists.
+This script is meant to help you when SME is giving you an error and you don't 
+have the time to look through everything. It will look for any and all things 
+that I guess causes errors in the linemask, segments, continuummask, and LineLists.
 
 WARNING: I don't know any IDL and what I think causes errors are based on 3 months of experience. 
     Future plans include: creating a settings file so you can switch between different profiles looking for different things and different directories;
     Creating a proper output file with helpful formatting and (maybe) suggested edits;
     Maybe a system that automatically flags lines in the files with a comment after the final input? 
     Expect updates when I've learned something new or when I'm procrastinating.
+
+New in version 0.5:
+    Now uses LineListReader.py to handle the linelist in a much smoother way, 
+    should now work for older pandas versions.
+    Weak-line approximation moved to separate file.
+    Some of the linelist checking code has been optimised.
 
 New in version 0.4:
     Rewritten output file formatting code, now both simpler and formatts things properly.
@@ -39,32 +46,31 @@ New in version 0.4:
             When prompted [y/n] to choose if you will check the linelist, give 'update' to be promted to change which
             linelist you are currently working with.
         If the code can't find your linelist, you are now prompted to change it's name.
-        
-New in version 0.3:
-    Creates an output file for the linelist search with the strengths of the lines from the weak line approximation included.
-
-
+    
+    0.4.5:
+        Implemented sys.argv to pick element to make things easier on rap/fedtmule
 """
 
 import numpy as np
 import pandas as pd
 import socket
+import sys
 
 "_____________________________________Set up directories_______________________________________"
 #Check computer to see if it is known or if manual selection of directories is needed
 Computer = socket.gethostname()
-if  Computer == 'ValorToMe':
+if  (Computer == 'ValorToMe') | (Computer == 'SQWAAK2'):
     ###Directories for my home computer
     lmaskdir = ''
     cmaskdir = ''
-    lldir = ''
-    LineListName = 'LineList'
-elif Computer == 'rap':
+    LL_dir = '/Users/monte/OneDrive - Lund University/Uni/Master/LineList_Copies/'
+    LL_name = 'VALD_nomols_20200123.dat'
+elif (Computer == 'rap') | (Computer == 'fedtmule'):
     ###Directories for rap
     lmaskdir = '/home/martin/Linelists/'
     cmaskdir = '/nfs/henrik/Linelists/'
-    lldir = '/home/martin/Linelists/'
-    LineListName = 'VALD_nomols_20200123'
+    LL_dir = '/home/martin/Linelists/'
+    LL_name = 'VALD_nomols_20200123.dat'
 else:
     lmaskdir = input('What is your linemask directory?: ')
     cmaskdir = input('What is your continuummask directory?: ')
@@ -82,11 +88,18 @@ Al,C,Ca,Ce,Co,Cr,Cu,Fe,Ge,Hf,K,Mg,Mn,Na,Nd,Ni,P,Rb,S,Sc,Si,Ti,V,Y,Yb = Elements
 q = 'quit'
 
 while True:
-    try:
-            element = eval(input('Which element are you sanity checking? '))
-    except NameError:
-        print('Element not recogniced, check spelling or edit the code if we got a new element')
-        continue
+    if len(sys.argv) > 1:
+        try:
+            element = sys.argv[1]
+            if element not in Elements + [q]: raise NameError
+        except NameError:
+            raise SystemExit('Element not recogniced, check spelling or edit the code if we got a new element')
+    else:
+        try:
+            element = eval(input('Which element are you sanity checking?: '))
+        except NameError:
+            print('Element not recogniced, check spelling or edit the code if we got a new element')
+            continue
     if element == q:
         raise SystemExit('Sanity not checked')
     try:
@@ -104,7 +117,7 @@ while True:
     break
 print('Checking {}...\n'.format(element))
 
-
+print('{} linemasks found...\n'.format(len(lmask)))
 
 
 "____________________________________Checking linemasks_______________________________________"
@@ -140,7 +153,7 @@ lLength = lmask[:,2] - lmask[:,1]
 LengthFlag = False
 for i in range(len(lLength)):
     if lLength[i] < lCrit:
-        print('{} linemask width = {}, recommended is {} Å'.format(lmask[i,0], format(lLength[i],'.2f'), lCrit))
+        print('{} linemask width = {}, recommended is {} Ã…'.format(lmask[i,0], format(lLength[i],'.2f'), lCrit))
         LengthFlag = True
 if LengthFlag == False:
     print('No linemasks too short')
@@ -233,68 +246,51 @@ if (LmaskFlag & SegCheck & InSegFlag & ContFlag ) == True:
 "____________________________________Linelist check__________________________________"
 update = 'update'
 
-if Computer != 'rap':
-    while True:
-        try:
-                ynq = input('Do you want to check the linelist? [y/n]: ')
-        except NameError:
-            print('Input not recogniced')
-            continue
-        break
-else:
-    ynq = 'n'
-    print('\n')
-    print("Can't check the linelist on rap at the moment due to pandas limitations")
+while True:
+    try:
+        ynq = input('Do you want to check the linelist? [y/n]: ')
+    except NameError:
+        print('Input not recogniced')
+        continue
+    break
 
 if ynq in ['n','N','no','No','NO']:
     raise SystemExit('Linelist not checked')
-    
 elif ynq == 'update':
     LineListName = input('Linelist name: ')
+else:
+    print('Checking linelist...')
     
 NoLinesFlag = False
 MultLinesFlag = False
 
-"______________________________________Functions_____________________________________"
-def logic(index):
-    '''Sorts the VALD linelist file, first three rows are header, every fourth row contains data, the rest are atomic physics and references '''
-    if index in [0, 1, 2]:
-        return(True)
-    elif (index-3) % 4 == 0:
-        return False
-    return True    
-
-def strength(gf, exc, T=5770):
-    '''Determines the strength of spectral lines using the weak-line approximation. Only works for lines of the same element and ionisationstage. 
-    Takes the gf value and the excitation energy [eV] as inputs, temperature is also needed, set to 5770 K by default to mimic the Sun. '''
-    return((10**gf)*np.exp(-exc/(T*8.6173*10**-5)))
-
 
 "______________________________Reads in linelist_____________________________________"
-ListHeader = ['EleIon','LambdaAir', 'loggf', 'ExcLow', 'JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth']
 
 while True:
     try:
-        LineList = pd.read_csv(lldir + LineListName + '.dat', index_col=False, names=ListHeader, skiprows= lambda x: logic(x))
+        from LineListReader import LL_reader
+        from strength import strength
+        ll = LL_reader(LL_name,LL_dir,write=False,element=element)
+    except ModuleNotFoundError:
+        raise SystemExit('Missing modules for linelist reading and weak-line approximation, download from https://github.com/mablscmo/SME_Scripts/ or check that PYTHONPATH can find them.')
     except FileNotFoundError:
         print("The linelist {} was not found, try another or press 'q' to quit".format(LineListName))
-        LineListName = input('Linelist name: ')
-        if LineListName == 'quit':
+        LL_name = input('Linelist name: ')
+        if LL_name == 'quit':
             raise SystemExit('Linelist not checked')
         continue        
     except OSError:
         print("The linelist {} was not found, try another or press 'q' to quit".format(LineListName))
-        LineListName = input('Linelist name: ')
-        if LineListName == 'quit':
+        LL_name = input('Linelist name: ')
+        if LL_name == 'quit':
             raise SystemExit('Linelist not checked')
         continue
-    break    
+    break
         
-LineList[['Ele','Ion']] = LineList.EleIon.str.split(expand=True)
-LineList['Ele'] = LineList['Ele'].str.lower() + "'"
-LineList = LineList.drop(columns=['JLow', 'ExcHigh', 'JHigh', 'LandLower', 'LandUpper', 'LandMean', 'RadDamping', 'StarkDamp', 'WaalsDamp', 'CentralDepth'])
-LineList['strength'] = strength(LineList['loggf'],LineList['ExcLow'],5700)
-
+#ll['Ele'] = ll.EleIon.apply(lambda x: x.strip("'").split()[0])
+ll['strength'] = strength(ll['loggf'],ll['ExcLow'])
+ll = ll.drop(columns=['JLow', 'ExcHigh', 'JHigh', 'LandLower','LandUpper','LandMean','RadDamping','StarkDamp','WaalsDamp','CentralDepth','LS1', 'base1', 'end1', 'LS2', 'base2','end2', 'ref'])
 
 "_______________________Checks linelist and writes report file_______________________"
 '''Goes through ther linemask to identify which lines are of interest. If there are multiple lines, it lets yuo know and adds the lines
@@ -310,8 +306,7 @@ TolCount = 0
 for i in range(len(lmask)):
     start = lmask[i,1]
     stop = lmask[i,2]
-    LinesInMask = LineList[(LineList['LambdaAir']>=start) & (LineList['LambdaAir']<=stop) & (LineList['Ele'].values == "'" + element + "'")]
-    LinesInMask = LinesInMask.drop(columns=['Ele', 'Ion'])
+    LinesInMask = ll[(ll['LambdaAir']>=start) & (ll['LambdaAir']<=stop)]
     if len(LinesInMask) > 1:
         print('Multiple lines in linemask {}:'.format(lmask[i,0]))
         print(LinesInMask)
