@@ -3,11 +3,14 @@
 -----------------------------------------
 Created on 2020-12-19
 author: Martin Montelius
-Version: 0.1.1
+Version: 0.1.1b
 -----------------------------------------
 New in 0.1.1:
     Compatability update with LineListReader 0.1.1s
     Added the ability to run with command line arguments
+    
+0.1.1b:
+    Fixed error
 """
 
 import numpy as np
@@ -75,28 +78,28 @@ def Dline2(S,L,J,S2,L2,J2):
     S2 = Sdecomp(S2)
     
     #Squared 6-j symbol from equation 14.50 in Cowan
-    D2 = j6(L,S,J,J2,1,L2)**2
+    D6 = j6(L,S,J,J2,1,L2)**2
     #The [J,J'] term from same equation
     JJ = (J*2 + 1)*(J2*2 +1) 
     
-    return(D2*JJ)
+    return(D6*JJ)
 
-def Fline2(J,I,F,J2,F2):
+def Fline2(J,I,F,F2,J2):
     '''Calculates the relative strength of a hyperfine transition, formula taken
-    from 2012A&A...545A..31H
+    from 2012A&A...545A..31H, called Höln-Kronig rule
     Note only five terms in contrast to Dline2's six, this is because there is 
-    no "I2" to check.'''
+    no "I2" to check if the transition is allowed.'''
     
-    #LS selection rule, only allowed transitions, delta F = 0, +-1. Not sure if 0->0 is ok for F = 0
-    if abs(F-F2) > 1:
+    #LS selection rule, only allowed transitions, delta F = 0, +-1, 0->0 not allowed
+    if (abs(F-F2) > 1) | ((F == 0) & (F2 == 0)):
         return(None)
     
-    #Squared 6-j symbol from 2012A&A...545A..31H
-    F2 = j6(J,I,F,F2,1,J2)**2
+    #Squared 6-j symbol for Höln-Kronig rule
+    F6 = j6(J,I,F,F2,1,J2)**2
     #The [F,F'] term from same equation
     FF = (F*2 + 1)*(F2*2 +1)
     
-    return(F2*FF)
+    return(F6*FF)
 
 def Newgf(loggf2,gu1,gu2,perc_l,perc_u):
     '''Calculates log(gf) for a secondary line, given statistical weights and 
@@ -215,15 +218,15 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
                         else:
                             break
                     except ValueError:
-                        print(f'Smaller search width failed, expected {len(hfs)} lines, found {len(secondary)}\n')
+                        print(f'Larger search width failed, expected {len(hfs)} lines, found {len(secondary)}\n')
                         if sec_width > 2:
-                            print('Minimum search width of 2 Å reached, check linelist and modify the search width accordingly\n')
+                            print('Maximum search width of 2 Å reached, check linelist and modify the search width accordingly\n')
                             return(None)
                         else:
                             continue                
         
         #All lines relative strength
-        sec_F2 = [Fline2(primary.JHigh, I, hfs[i][1], primary.JLow, hfs[i][0]) for i in range(len(hfs))]
+        sec_F2 = [Fline2(primary.JHigh, I, hfs[i][1], hfs[i][0], primary.JLow) for i in range(len(hfs))]
         
         #Primary lines strength
         prime_A = np.max(sec_F2)
@@ -299,7 +302,10 @@ if __name__ == "__main__":
         LSMult = multiplet(wl = s_line, gf = gf_astr, linelist = ll)
         if LSMult is None:
             #When multiplet() finds an error it returns None and hopefully its own error message
-            continue
+            if len(sys.argv) > 1:
+                break
+            else:
+                continue
         print('\nWavelength   old log(gf)     new log(gf)\n')
         for i in range(len(LSMult)):
             sec_line = LSMult.iloc[i]
