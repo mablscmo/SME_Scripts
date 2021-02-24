@@ -3,14 +3,23 @@
 -----------------------------------------
 Created on 2020-12-19
 author: Martin Montelius
-Version: 0.1.1b
+Version: 0.1.1c
 -----------------------------------------
 New in 0.1.1:
-    Compatability update with LineListReader 0.1.1s
+    Compatability update with LineListReader 0.1.1
     Added the ability to run with command line arguments
     
 0.1.1b:
     Fixed error
+    
+0.1.1c:
+    Code cleanup to get rid of my messy formatting
+    Bug fix for lines without secondaries
+    Now returns primary line, because guess means it is actually needed
+
+To do:
+    Write fine/hyperfine combination code, pretty sure we can do mixed hfs
+    lines as long as they are from the same LS Multiplet, ex K lines
 """
 
 import numpy as np
@@ -32,18 +41,22 @@ def Ldecomp(L):
     except IndexError:
         print("Haven't implemented L higher than H, not in tables.\n")
         return(None)
-    return(L)
+    return L
+
 
 def Sdecomp(S):
     '''Returns S as a number'''
-    return((float(S)-1)/2)
-    
+    return (float(S)-1)/2
+
+
 def dabc(a,b,c):
     '''delta abc, equation 5.24 in Cowan'''
-    return(np.sqrt((fac(a+b-c)*fac(a-b+c)*fac(-a+b+c))/fac(a+b+c+1)))
+    return np.sqrt((fac(a+b-c)*fac(a-b+c)*fac(-a+b+c))/fac(a+b+c+1))
+
 
 def j6(j1,j2,j3,l1,l2,l3):
-    '''6-j formula, equation 5.23 in Cowan'''
+    '''6-j formula, equation 5.23 in Cowan
+    Could use wigner_6j from sympy.physics.wigner, but I wanted to understand what was going on.'''
     #equation 5.24
     deltas = dabc(j1,j2,j3)*dabc(j1,l2,l3)*dabc(l1,j2,l3)*dabc(l1,l2,j3)
     
@@ -57,7 +70,7 @@ def j6(j1,j2,j3,l1,l2,l3):
     
     #the large sum in eq 5.23
     rhs = sum(((fac(i+1)*(-1)**i)/(fac(i-j1-j2-j3)*fac(i-j1-l2-l3)*fac(i-l1-j2-l3)*fac(i-l1-l2-j3)))*(1/(fac(j1+j2+l1+l2-i)*fac(j2+j3+l2+l3-i)*fac(j3+j1+l3+l1-i)))  for i in s)
-    return(deltas*rhs)
+    return deltas*rhs
 
 
 def Dline2(S,L,J,S2,L2,J2):
@@ -81,8 +94,8 @@ def Dline2(S,L,J,S2,L2,J2):
     D6 = j6(L,S,J,J2,1,L2)**2
     #The [J,J'] term from same equation
     JJ = (J*2 + 1)*(J2*2 +1) 
-    
-    return(D6*JJ)
+    return D6*JJ
+
 
 def Fline2(J,I,F,F2,J2):
     '''Calculates the relative strength of a hyperfine transition, formula taken
@@ -98,8 +111,8 @@ def Fline2(J,I,F,F2,J2):
     F6 = j6(J,I,F,F2,1,J2)**2
     #The [F,F'] term from same equation
     FF = (F*2 + 1)*(F2*2 +1)
-    
-    return(F6*FF)
+    return F6*FF
+
 
 def Newgf(loggf2,gu1,gu2,perc_l,perc_u):
     '''Calculates log(gf) for a secondary line, given statistical weights and 
@@ -109,19 +122,22 @@ def Newgf(loggf2,gu1,gu2,perc_l,perc_u):
     gu2: primary line statistical weight
     perc_l: secondary line percent strength
     perc_u: primary line percent strength'''
-    return(np.log10((10**loggf2)*(gu1/gu2)*(perc_l/perc_u)))
+    return np.log10((10**loggf2)*(gu1/gu2)*(perc_l/perc_u))
+
 
 def statW(j):
     '''Returns statistical weight, give j
     Follows formula g = 2j +1'''
-    return(2*j+1)
+    return 2*j+1
+
 
 def getI(element):
     '''Returns the nuclear spin of the most common isotope of the given element. 
     Numbers taken from Wikipedia, individual elements list of isotope pages.
     Implemented odd elements from Na to Cu'''
     data = pd.DataFrame({'I': [3/2,5/2,1/2,3/2,7/2,7/2,5/2,7/2,3/2],'A':[23,27,31,39,45,51,55,59,63]},index = ['Na','Al','P','K','Sc','V','Mn','Co','Cu'])
-    return(data.loc[data.index == f'{element}', 'I'])
+    return data.loc[data.index == f'{element}', 'I']
+
 
 def manual(astr,S1,L1,S2,L2,Jlow,Jhigh,jlow,jhigh,prec = 3): 
     '''Manual alternative to the linelist searching algorithm in multiplet().
@@ -133,10 +149,10 @@ def manual(astr,S1,L1,S2,L2,Jlow,Jhigh,jlow,jhigh,prec = 3):
     prec: number of decimals given'''
     primary_D2 = Dline2(S1, L1, Jlow, S2, L2, Jhigh)
     secondary_D2 = Dline2(S1, L1, jlow, S2, L2, jhigh)
-    return(round(Newgf(astr,statW(jhigh),statW(Jhigh),secondary_D2*100/primary_D2,100),3))
+    return round(Newgf(astr,statW(jhigh),statW(Jhigh),secondary_D2*100/primary_D2,100),3)
 
-    
-def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
+
+def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005,guess=True):
     '''Takes wavelength and linelist, finds strongest line and possible secondaries.
     Returns the relative strengths of the secondary lines.
     
@@ -148,13 +164,16 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
     
     sec_width: +- wl area where secondary lines are searched for
     prime_width: +- wl area where the primary line is searched for
+    guess: experimental feature to estimate how wrong the formula is, as it 
+        only adjusts one of the lines. So far it's limited to cases where
+        new_gf > astr_gf
     '''
     
     #Attempt to find line, if multiple have exact same wavelength, take strongest
     primary = linelist.loc[(linelist['LambdaAir'] > wl - prime_width) & (linelist['LambdaAir'] < wl + prime_width)]
     if len(primary.index) == 0:
         print('Primary line not found')
-        return(None)
+        return None
     elif len(primary.index) > 1:
         #If multiple lines, use weak line approximation to find the strongest line
         primary = linelist.iloc[strength(primary.loggf,primary.ExcLow).idxmax()]
@@ -164,11 +183,11 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
     print(f'\nIdentified {primary.EleIon} line as primary at {primary.LambdaAir} \n')
     
     #Search surrounding area for lines of same elementand ionisation stage
-    secondary = linelist.loc[(linelist.EleIon == primary.EleIon) & (linelist.LambdaAir > primary.LambdaAir - sec_width) & (linelist.LambdaAir < primary.LambdaAir + sec_width)]
+    secondary = linelist.loc[(linelist.EleIon == primary.EleIon) & (linelist.LambdaAir > primary.LambdaAir - sec_width) & (linelist.LambdaAir < primary.LambdaAir + sec_width)].copy()
     
-    if len(primary.index) == 1:
+    if len(secondary.index) == 1:
         print('Secondary lines not found\n')
-        return(None)        
+        return None        
     elif (len(np.unique(secondary.end1)) != 1) | (len(np.unique(secondary.end2)) != 1):
         #Checks if LS terms are the same for all levels, if multiple multiplets
         #contribute, the contributions can't be calulated
@@ -204,7 +223,7 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
                         print(f'Smaller search width failed, expected {len(hfs)} lines, found {len(secondary)}\n')
                         if sec_width < 0.1:
                             print('Minimum search width of 0.1 Å reached, check linelist and modify the search width accordingly\n')
-                            return(None)
+                            return None
                         else:
                             continue
             else:
@@ -221,7 +240,7 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
                         print(f'Larger search width failed, expected {len(hfs)} lines, found {len(secondary)}\n')
                         if sec_width > 2:
                             print('Maximum search width of 2 Å reached, check linelist and modify the search width accordingly\n')
-                            return(None)
+                            return None
                         else:
                             continue                
         
@@ -230,27 +249,43 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005):
         
         #Primary lines strength
         prime_A = np.max(sec_F2)
-        
+            
         #Sorts lines to get same strength distribution as previously
         secondary = secondary.sort_values('loggf')
         secondary['percent'] = np.sort(sec_F2/prime_A)*100
         secondary = secondary.sort_index()
         #Finds new log(gf) values for all lines based on astrophysical measurement
         secondary['new_gf'] = secondary.apply(lambda line: Newgf(gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
-        return(secondary[['LambdaAir','loggf','new_gf']])
+        if guess == True:
+            ratio = prime_A/np.sum(sec_F2)
+            guess_gf = gf - (1 - ratio) * (gf - secondary.loggf.max())
+            secondary['guess_gf'] = secondary.apply(lambda line: Newgf(guess_gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
+            return secondary[['LambdaAir','loggf','new_gf','guess_gf']]
+        else:
+            return secondary[['LambdaAir','loggf','new_gf']]
     else: 
         #Fine structure multiplet
-        #Not strictly necessary, but main line is not needed as we already know its log(gf)
-        secondary = secondary.drop([primary.name],axis=0)
+        # #Not strictly necessary, but main line is not needed as we already know its log(gf)
+        # secondary = secondary.drop([primary.name],axis=0)
         #Primary lines strength
         main_D2 = Dline2(primary.end1[0], primary.end1[1], primary.JLow, primary.end2[0], primary.end2[1], primary.JHigh)
         
         #Relative strengths
         secondary['percent'] = secondary.apply(lambda line: 100*Dline2(line.end1[0],line.end1[1],line.JLow,line.end2[0],line.end2[1],line.JHigh)/main_D2,axis=1)
+        sec_D2 = secondary.apply(lambda line: Dline2(line.end1[0],line.end1[1],line.JLow,line.end2[0],line.end2[1],line.JHigh),axis=1).sum()
+        
+        #Rescale measured gf value to sum of all lines
+        if guess == True:
+            ratio = (2*main_D2/sec_D2) - 1
+            guess_gf = gf*ratio        
         
         #New log(gf) values for secondary lines based on astrophysical measurement
         secondary['new_gf'] = secondary.apply(lambda line: Newgf(gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
-        return(secondary[['LambdaAir','loggf','new_gf']])
+        if guess == True:
+            secondary['guess_gf'] = secondary.apply(lambda line: Newgf(guess_gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
+            return secondary[['LambdaAir','loggf','new_gf','guess_gf']]
+        else:
+            return secondary[['LambdaAir','loggf','new_gf']]
 
 if __name__ == "__main__":
     #Change to match linelist names and directories, socket part and if statement 
@@ -279,12 +314,17 @@ if __name__ == "__main__":
             parser = argparse.ArgumentParser(description='''Python code to assist in measuring astrophysical log(gf) values of merged fine or hyperfine structure lines. For lines that are too close to measure individually, this code lets you measure the whole line and calculate what the log(gf) values of the components should be.\nRunning the code from the command line lets you give wavelength and astrophysically measured log(gf) value for the strongest component line as either arguments or input once the code is running.''')
             parser.add_argument("s_line", type=float, help="wavelength of primary line in Ångström")
             parser.add_argument("gf_astr", type=float, help="log(gf) of primary line")
+            parser.add_argument("guess_flag", nargs='?', type=bool, help="calculate corrected log(gf) value based on previous value", default=True)
             args = parser.parse_args()
-            s_line, gf_astr = args.s_line, args.gf_astr
+            s_line, gf_astr, guess_flag = args.s_line, args.gf_astr, args.guess_flag
         else:
         #Manual input of lines, needs to be reset after saving the linelist
             s_line = input('Wavelength: ')
-            if s_line == 'q':
+            if s_line in ['n','N','no','No','NO']:
+                guess_flag = False
+            else:
+                guess_flag = True
+            if s_line in ['q','Q','quit','Quit','QUIT','exit','Exit','EXIT']:
                 print('\nClosing LSMultiplet..\n')
                 break
             else:
@@ -299,16 +339,24 @@ if __name__ == "__main__":
                 print('\n ERROR: input not recogniced as a number, try again\n')
                 continue
             
-        LSMult = multiplet(wl = s_line, gf = gf_astr, linelist = ll)
+        LSMult = multiplet(wl = s_line, gf = gf_astr, linelist = ll, guess = guess_flag)
         if LSMult is None:
             #When multiplet() finds an error it returns None and hopefully its own error message
             if len(sys.argv) > 1:
                 break
             else:
                 continue
-        print('\nWavelength   old log(gf)     new log(gf)\n')
-        for i in range(len(LSMult)):
-            sec_line = LSMult.iloc[i]
-            print('{0: <15}{1:<10}-->{2:>9}\n'.format(format(sec_line.LambdaAir,'.4f'),format(sec_line.loggf,'.3f'),format(sec_line.new_gf,'.3f')))
-        if len(sys.argv) > 1:
-            break
+        elif len(LSMult.columns) == 4:
+            print('\nWavelength   old log(gf)     new log(gf)     guess log(gf)\n')
+            for i in range(len(LSMult)):
+                sec_line = LSMult.iloc[i]
+                print('{0: <10}{1:>11}    -->{2:>9}     -->{3:>9}\n'.format(format(sec_line.LambdaAir,'.4f'),format(sec_line.loggf,'.3f'),format(sec_line.new_gf,'.3f'),format(sec_line.guess_gf,'.3f')))
+            if len(sys.argv) > 1:
+                break            
+        else:
+            print('\nWavelength   old log(gf)     new log(gf)\n')
+            for i in range(len(LSMult)):
+                sec_line = LSMult.iloc[i]
+                print('{0: <10}{1:>11}    -->{2:>9}\n'.format(format(sec_line.LambdaAir,'.4f'),format(sec_line.loggf,'.3f'),format(sec_line.new_gf,'.3f')))
+            if len(sys.argv) > 1:
+                break
