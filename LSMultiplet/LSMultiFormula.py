@@ -15,6 +15,7 @@ New in 0.1.1:
 0.1.1c:
     Code cleanup to get rid of my messy formatting
     Bug fix for lines without secondaries
+    Fixed guess gf for fine structure lines
     Now returns primary line, because guess means it is actually needed
 
 To do:
@@ -171,6 +172,7 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005,guess=True):
     
     #Attempt to find line, if multiple have exact same wavelength, take strongest
     primary = linelist.loc[(linelist['LambdaAir'] > wl - prime_width) & (linelist['LambdaAir'] < wl + prime_width)]
+    
     if len(primary.index) == 0:
         print('Primary line not found')
         return None
@@ -257,31 +259,33 @@ def multiplet(wl,gf,linelist,sec_width = 0.5,prime_width=0.005,guess=True):
         #Finds new log(gf) values for all lines based on astrophysical measurement
         secondary['new_gf'] = secondary.apply(lambda line: Newgf(gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
         if guess == True:
+            #Ratio of primary to all secondaries
             ratio = prime_A/np.sum(sec_F2)
+            #My guess_gf algorithm, adjust more when secondaries are weak and vice versa
             guess_gf = gf - (1 - ratio) * (gf - secondary.loggf.max())
             secondary['guess_gf'] = secondary.apply(lambda line: Newgf(guess_gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
             return secondary[['LambdaAir','loggf','new_gf','guess_gf']]
         else:
             return secondary[['LambdaAir','loggf','new_gf']]
     else: 
-        #Fine structure multiplet
-        # #Not strictly necessary, but main line is not needed as we already know its log(gf)
-        # secondary = secondary.drop([primary.name],axis=0)
+        #Assuming fine structure multiplet
         #Primary lines strength
         main_D2 = Dline2(primary.end1[0], primary.end1[1], primary.JLow, primary.end2[0], primary.end2[1], primary.JHigh)
         
         #Relative strengths
         secondary['percent'] = secondary.apply(lambda line: 100*Dline2(line.end1[0],line.end1[1],line.JLow,line.end2[0],line.end2[1],line.JHigh)/main_D2,axis=1)
-        sec_D2 = secondary.apply(lambda line: Dline2(line.end1[0],line.end1[1],line.JLow,line.end2[0],line.end2[1],line.JHigh),axis=1).sum()
-        
-        #Rescale measured gf value to sum of all lines
-        if guess == True:
-            ratio = (2*main_D2/sec_D2) - 1
-            guess_gf = gf*ratio        
         
         #New log(gf) values for secondary lines based on astrophysical measurement
         secondary['new_gf'] = secondary.apply(lambda line: Newgf(gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
+        
+        #Rescale measured gf value to sum of all lines
         if guess == True:
+            #Finds relative strengths for all lines
+            sec_D2 = secondary.apply(lambda line: Dline2(line.end1[0],line.end1[1],line.JLow,line.end2[0],line.end2[1],line.JHigh),axis=1).sum()
+            #Ratio of primary to all secondaries (includes itself now)
+            ratio = main_D2/sec_D2
+            #My guess_gf algorithm, adjust more when secondaries are weak and vice versa
+            guess_gf = gf - (1 - ratio) * (gf - primary.loggf)    
             secondary['guess_gf'] = secondary.apply(lambda line: Newgf(guess_gf,statW(line.JHigh),statW(primary.JHigh),line.percent,100),axis=1)
             return secondary[['LambdaAir','loggf','new_gf','guess_gf']]
         else:
